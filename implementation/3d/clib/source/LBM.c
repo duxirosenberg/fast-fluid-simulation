@@ -226,53 +226,51 @@ void lees_edwards_boundary_condition(int nX, int nY, int nZ, int direction_size,
             for (int z = 0; z < nZ; z++) {
                 for (int i = 0; i < direction_size; i++) {
                     int index = x + y * nX + z * nX * nY + i * nX * nY * nZ;
-                    //s_1=0;s_2=1;
-                    int xDirection = directions[3 * i];
-                    int yDirection = directions[3 * i + 1];
-                    int zDirection = directions[3 * i + 2];
+                    int directionX = directions[3 * i];
+                    int directionY = directions[3 * i + 1];
+                    int directionZ = directions[3 * i + 2];
 
-                    int ymd = (nY + y - yDirection) % nY;
-                    int zmd = (nZ + z - zDirection) % nZ;
-                    if(y==0 && yDirection == 1) {
+                    int ymd = (nY + y - directionY) % nY;
+                    int zmd = (nZ + z - directionY) % nZ;
+                    if(y==0 && directionY == 1) {
                         //Bottom Wall.
                         //Equation (17) from Less-Edwards boundary conditions for lattice Boltzmann suspension simulations
                         //by Eric Lorenz and Alfons G. Hoekstra
-                        int x_pos = (x + d_x_I + 2 * nX - xDirection) % nX;
-                        int x_shifted = (x + d_x_I + 2 * nX + 1 - xDirection) % nX;
+                        int x_pos = (x + d_x_I + 2 * nX - directionX) % nX;
+                        int x_shifted = (x + d_x_I + 2 * nX + 1 - directionX) % nX;
                         int posIndex = x_pos + ymd * nX + zmd * nX * nY + i * nX * nY * nZ;
                         int shiftedIndex = x_shifted + ymd * nX + zmd * nX * nY + i * nX * nY * nZ;
 
                         double u_le_x = -1 * gamma_dot * (double)nY;
                         double galilean_transformation_pos = previous_particle_distributions[posIndex] +
-                                calculate_feq_u(posIndex, u_le_x, c_s, density_field, velocity_field, directions[3 * i], directions[3 * i + 1], directions[3 * i + 2], weights[i]) -
-                                calculate_feq_u(posIndex, 0, c_s, density_field, velocity_field, directions[3 * i], directions[3 * i + 1], directions[3 * i + 2], weights[i]);
+                                calculate_feq_u(posIndex, u_le_x, c_s, density_field, velocity_field, directionX, directionY, directionZ, weights[i]) -
+                                calculate_feq_u(posIndex, 0, c_s, density_field, velocity_field, directionX, directionY, directionZ, weights[i]);
                         double galilean_transformation_shift = previous_particle_distributions[shiftedIndex] +
-                                calculate_feq_u(shiftedIndex, u_le_x, c_s, density_field, velocity_field, directions[3 * i], directions[3 * i + 1], directions[3 * i + 2], weights[i]) -
-                                calculate_feq_u(shiftedIndex, 0, c_s, density_field, velocity_field, directions[3 * i], directions[3 * i + 1], directions[3 * i + 2], weights[i]);
+                                calculate_feq_u(shiftedIndex, u_le_x, c_s, density_field, velocity_field, directionX, directionY, directionZ, weights[i]) -
+                                calculate_feq_u(shiftedIndex, 0, c_s, density_field, velocity_field, directionX, directionY, directionZ, weights[i]);
                         //Equation (18) from same paper.
                         particle_distributions[index] = s_1 * galilean_transformation_shift + s_2 * galilean_transformation_pos;
-                    } else if(y==nY-1 && yDirection == -1) {
+                    } else if(y==nY-1 && directionY == -1) {
                         //Equation (17) from Less-Edwards boundary conditions for lattice Boltzmann suspension simulations
                         //by Eric Lorenz and Alfons G. Hoekstra
                         //Top Wall.
-                        int x_pos = (x - d_x_I + 2 * nX - xDirection) % nX;
-                        int x_shifted = (x - d_x_I + 2 * nX - 1 - xDirection) % nX;
+                        int x_pos = (x - d_x_I + 2 * nX - directionX) % nX;
+                        int x_shifted = (x - d_x_I + 2 * nX - 1 - directionX) % nX;
                         int posIndex = x_pos + ymd * nX + zmd * nX * nY + i * nX * nY * nZ;
                         int shiftedIndex = x_shifted + ymd * nX + zmd * nX * nY + i * nX * nY * nZ;
 
-
                         double u_le_x = gamma_dot * (double)nY;
                         double galilean_transformation_pos = previous_particle_distributions[posIndex] +
-                                calculate_feq_u(posIndex, u_le_x, c_s, density_field, velocity_field, directions[3 * i], directions[3 * i + 1], directions[3 * i + 2], weights[i]) -
-                                calculate_feq_u(posIndex, 0, c_s, density_field, velocity_field, directions[3 * i], directions[3 * i + 1], directions[3 * i + 2], weights[i]);
+                                calculate_feq_u(posIndex, u_le_x, c_s, density_field, velocity_field, directionX, directionY, directionZ, weights[i]) -
+                                calculate_feq_u(posIndex, 0, c_s, density_field, velocity_field, directionX, directionY, directionZ, weights[i]);
                         double galilean_transformation_shift = previous_particle_distributions[shiftedIndex] +
-                                calculate_feq_u(shiftedIndex, u_le_x, c_s, density_field, velocity_field, directions[3 * i], directions[3 * i + 1], directions[3 * i + 2], weights[i]) -
-                                calculate_feq_u(shiftedIndex, 0, c_s, density_field, velocity_field, directions[3 * i], directions[3 * i + 1], directions[3 * i + 2], weights[i]);
+                                calculate_feq_u(shiftedIndex, u_le_x, c_s, density_field, velocity_field, directionX, directionY, directionZ, weights[i]) -
+                                calculate_feq_u(shiftedIndex, 0, c_s, density_field, velocity_field, directionX, directionY, directionZ, weights[i]);
                         //Equation (18) from same paper.
                         particle_distributions[index] = s_1 * galilean_transformation_shift + s_2 * galilean_transformation_pos;
                     } else {
                         //Interior points. (Enforce periodicity along x axis);.
-                        int xmd = (nX + x - xDirection) % nX;
+                        int xmd = (nX + x - directionX) % nX;
                         int otherIndex = xmd + ymd * nX + zmd * nX * nY + i * nX * nY * nZ;
                         particle_distributions[index] = previous_particle_distributions[otherIndex];
                     }
