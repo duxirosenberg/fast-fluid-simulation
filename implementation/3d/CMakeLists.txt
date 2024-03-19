@@ -1,6 +1,8 @@
 cmake_minimum_required (VERSION 3.5)
 set(CMAKE_C_COMPILER "gcc")
+SET(CMAKE_C_FLAGS  "-O3")
 set(CMAKE_CXX_COMPILER g++)
+SET(CMAKE_CXX_FLAGS  "-O3")
 set(CMAKE_CXX_STANDARD 11)
 set(CLIB clib)
 
