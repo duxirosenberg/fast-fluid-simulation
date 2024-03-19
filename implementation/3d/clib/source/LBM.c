@@ -31,7 +31,6 @@ void initialize(int nX, int nY, int nZ, int direction_size,
     for(int i = 0; i < 3 * box_flatten_length; i++) {
         velocity_field[i] = 0;
     }
-    printf("%p\n", velocity_field);
 
     for(int x = 0; x < nX; x++) {
         for(int y = 0; y < nY; y++) {
@@ -62,7 +61,6 @@ void compute_density_momentum_moment(int nX, int nY, int nZ, int direction_size,
                     u[2] += dist * directions[3 * i + 2];
                 }
                 int index = (z * nX * nY) + (y * nX) + x;
-                printf("new density: %f\n", new_density);
                 density_field[index] = new_density;
                 velocity_field[3 * index] = u[0] / new_density;
                 velocity_field[3 * index + 1] = u[1] / new_density;
@@ -290,13 +288,10 @@ void stream(int nX, int nY, int nZ, int direction_size, int time, double gamma_d
             int* reverse_indexes
             ) {
     if (boundary_condition == 1) {
-        printf("Performing periodic");
         periodic_boundary_condition(nX, nY, nZ, direction_size, previous_particle_distributions, particle_distributions, directions);
     } else if(boundary_condition == 2) {
-        printf("Performing couette");
         couette_boundary_condition(nX, nY, nZ, direction_size, c_s, previous_particle_distributions, particle_distributions, directions, weights, reverse_indexes);
     } else if(boundary_condition == 3) {
-        printf("Performing less_edwards");
         lees_edwards_boundary_condition(nX, nY, nZ, direction_size, time, gamma_dot, c_s, density_field, velocity_field, previous_particle_distributions, particle_distributions, directions, weights);
     }
 }
