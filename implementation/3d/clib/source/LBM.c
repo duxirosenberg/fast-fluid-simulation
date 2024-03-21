@@ -236,14 +236,15 @@ void lees_edwards_boundary_condition(int nX, int nY, int nZ, int direction_size,
                         //by Eric Lorenz and Alfons G. Hoekstra
                         int x_pos = (x + d_x_I + 2 * nX - directionX) % nX;
                         int x_shifted = (x + d_x_I + 2 * nX + 1 - directionX) % nX;
-                        int posIndex = x_pos + ymd * nX + zmd * nX * nY + i * nX * nY * nZ;
-                        int shiftedIndex = x_shifted + ymd * nX + zmd * nX * nY + i * nX * nY * nZ;
+                        int posIndex = x_pos + ymd * nX + zmd * nX * nY;
+                        int shiftedIndex = x_shifted + ymd * nX + zmd * nX * nY;
+                        int distIndex = i * nX * nY * nZ;
 
                         double u_le_x = -1 * gamma_dot * (double)nY;
-                        double galilean_transformation_pos = previous_particle_distributions[posIndex] +
+                        double galilean_transformation_pos = previous_particle_distributions[posIndex + distIndex] +
                                 calculate_feq_u(posIndex, u_le_x, c_s, density_field, velocity_field, directionX, directionY, directionZ, weights[i]) -
                                 calculate_feq_u(posIndex, 0, c_s, density_field, velocity_field, directionX, directionY, directionZ, weights[i]);
-                        double galilean_transformation_shift = previous_particle_distributions[shiftedIndex] +
+                        double galilean_transformation_shift = previous_particle_distributions[shiftedIndex + distIndex] +
                                 calculate_feq_u(shiftedIndex, u_le_x, c_s, density_field, velocity_field, directionX, directionY, directionZ, weights[i]) -
                                 calculate_feq_u(shiftedIndex, 0, c_s, density_field, velocity_field, directionX, directionY, directionZ, weights[i]);
                         //Equation (18) from same paper.
@@ -254,14 +255,15 @@ void lees_edwards_boundary_condition(int nX, int nY, int nZ, int direction_size,
                         //Top Wall.
                         int x_pos = (x - d_x_I + 2 * nX - directionX) % nX;
                         int x_shifted = (x - d_x_I + 2 * nX - 1 - directionX) % nX;
-                        int posIndex = x_pos + ymd * nX + zmd * nX * nY + i * nX * nY * nZ;
-                        int shiftedIndex = x_shifted + ymd * nX + zmd * nX * nY + i * nX * nY * nZ;
+                        int posIndex = x_pos + ymd * nX + zmd * nX * nY;
+                        int shiftedIndex = x_shifted + ymd * nX + zmd * nX * nY;
+                        int distIndex = i * nX * nY * nZ;
 
                         double u_le_x = gamma_dot * (double)nY;
-                        double galilean_transformation_pos = previous_particle_distributions[posIndex] +
+                        double galilean_transformation_pos = previous_particle_distributions[posIndex + distIndex] +
                                 calculate_feq_u(posIndex, u_le_x, c_s, density_field, velocity_field, directionX, directionY, directionZ, weights[i]) -
                                 calculate_feq_u(posIndex, 0, c_s, density_field, velocity_field, directionX, directionY, directionZ, weights[i]);
-                        double galilean_transformation_shift = previous_particle_distributions[shiftedIndex] +
+                        double galilean_transformation_shift = previous_particle_distributions[shiftedIndex + distIndex] +
                                 calculate_feq_u(shiftedIndex, u_le_x, c_s, density_field, velocity_field, directionX, directionY, directionZ, weights[i]) -
                                 calculate_feq_u(shiftedIndex, 0, c_s, density_field, velocity_field, directionX, directionY, directionZ, weights[i]);
                         //Equation (18) from same paper.

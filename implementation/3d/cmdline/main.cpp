@@ -185,7 +185,8 @@ int main(int argc, char** argv) {
 	output_indices_file(nX, nY, nZ);
 	int scale = 1;
 	int runs = n_steps * scale * scale * scale;
-	for(int i = 0; i < runs; i = i + 1) {
+    // In the original the time always gets incremented before a time step is performed, so it starts with 1 and goes to runs
+    for(int i = 1; i <= runs; i = i++) {
 		perform_timestep(nX, nY, nZ, direction_size, i, tau, gamma_dot, c_s, boundary_condition, density_field, velocity_field, previous_particle_distributions, particle_distributions, directions, weights, reverse_indexes);
 		if((i+1) % save_every == 0) {
             double percentage = (double) (i + 1) / (double) (runs) * 100.0;
