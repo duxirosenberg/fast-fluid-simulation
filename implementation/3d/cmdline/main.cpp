@@ -44,11 +44,16 @@ int main(int argc, char** argv) {
     return -1;
   }
 	std::cout << "Do you want to clean the previous run? (1 - Yes, 0 - No): ";
-	int choice;
-	std::cin >> choice;
+	int choice=1;
+	// std::cin >> choice;
 	if(choice == 1) {
+		#ifdef LBM_STRUCT
+		system("rm -rf outputS");
+		system("mkdir outputS");
+		#else
 		system("rm -rf output");
 		system("mkdir output");
+		#endif
 	}
 
 	std::ifstream t("options.json");
@@ -181,17 +186,46 @@ int main(int argc, char** argv) {
 	std::cout << "Kinematic shear viscosity: " << viscosity << '\n';
     //Equation 4.4.49
     std::cout << "For velocity set D2Q9,D3Q15 and D3Q27, |u_max|<0.577\n";
-	output_lbm_data("output/0.csv", true, nX, nY, nZ, density_field, velocity_field);
-	output_indices_file(nX, nY, nZ);
+
+
 	int scale = 1;
 	int runs = n_steps * scale * scale * scale;
-    // In the original the time always gets incremented before a time step is performed, so it starts with 1 and goes to runs
+
+
+	#ifdef LBM_STRUCT
+	LBM solver{	nX, nY, nZ, direction_size, density_field, velocity_field, 
+				previous_particle_distributions, particle_distributions, reverse_indexes, directions, weights, 
+				c_s, tau, gamma_dot, boundary_condition};
+
+	LBM* S =  &solver;
+	std::cout << "solver allocated" << std::endl;
+	#endif
+
+
+	#ifdef LBM_STRUCT
+	output_lbm_data("outputS/0.csv", true, nX, nY, nZ, density_field, velocity_field);
+	#else
+	output_lbm_data("output/0.csv", true, nX, nY, nZ, density_field, velocity_field);
+	#endif
+	// here correct
+
     for(int i = 1; i <= runs; i++) {
+		// std::cout << i << std::endl;
+		
+		#ifdef LBM_STRUCT
+		perform_timestep(S, i);
+		#else
 		perform_timestep(nX, nY, nZ, direction_size, i, tau, gamma_dot, c_s, boundary_condition, density_field, velocity_field, previous_particle_distributions, particle_distributions, directions, weights, reverse_indexes);
-		if((i+1) % save_every == 0) {
-            double percentage = (double) (i + 1) / (double) (runs) * 100.0;
-            std::cout << "Saving data - " << (i + 1) << "/" << runs << " (" << percentage << "%)" << '\n';
-            output_lbm_data("output/" + std::to_string(i + 1) + ".csv", true, nX, nY, nZ, density_field, velocity_field);
+		#endif
+
+		if((i) % save_every == 0) {
+            double percentage = (double) (i) / (double) (runs) * 100.0;
+            std::cout << "Saving data - " << (i) << "/" << runs << " (" << percentage << "%)" << '\n';
+			#ifdef LBM_STRUCT
+            output_lbm_data("outputS/" + std::to_string(i) + ".csv", true, nX, nY, nZ, density_field, velocity_field);
+			#else
+            output_lbm_data("output/" + std::to_string(i) + ".csv", true, nX, nY, nZ, density_field, velocity_field);
+			#endif
             //output_velocity(nX, nY, velocity_field);
         }
 	}
