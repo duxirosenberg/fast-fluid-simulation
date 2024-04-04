@@ -78,11 +78,11 @@ void output_lbm_data(std::string filename, bool header, int nX, int nY, int nZ, 
 void check_solution(std::string soluFolder,std::string testFolder, int time, int nX, int nY, int nZ, double* density_field, double* velocity_field){
 
         const std::string  soluFile = soluFolder+std::to_string(time)+".csv";
-        const std::string  testFile = soluFolder+std::to_string(time)+".csv";
+        const std::string  testFile = testFolder+std::to_string(time)+".csv";
+        std::cout << "Comparing:  " << soluFile << "  to  " << testFile << "  at time  " << time << std::endl;
 
         bool equality = true; 
         if(file_exists(soluFile) /*&& file_exists(testFile)*/ ) {
-        		std::cout << "Checking Solution for Time: " << time << std::endl; // '\n';
                 
         		io::CSVReader<4> inSolu(soluFile);
         		io::CSVReader<4> inTest(testFile);

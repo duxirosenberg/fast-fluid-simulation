@@ -59,9 +59,6 @@ int main(int argc, char** argv) {
 	#endif
 
 
-
-	// std::string testFolder = d["solutionFolder"].GetString;
-
 	std::cout << "Do you want to clean the previous run? (1 - Yes, 0 - No): ";
 	int choice=1;
 	// std::cin >> choice;
@@ -220,29 +217,50 @@ int main(int argc, char** argv) {
 	output_lbm_data(testFolder + "0.csv", true, nX, nY, nZ, density_field, velocity_field);
 	output_indices_file(testFolder + "indices.csv", nX, nY, nZ);
 
+	double measure;
+	int time = 1; // time
+	int* a = &time;
 
 
-	 __sync_synchronize(); 
-    for(int i = 1; i <= runs; i++) {
-		
-		#ifdef LBM_STRUCT
-		perform_timestep(S, i);
+	__sync_synchronize(); 
+
+		measure =
+		#ifdef LBM_STRUCT 
+		perform_Measurement(runs, S, time );
 		#else
-		perform_timestep(nX, nY, nZ, direction_size, i, tau, gamma_dot, c_s, boundary_condition, density_field, velocity_field, previous_particle_distributions, particle_distributions, directions, weights, reverse_indexes);
+		perform_Measurement(runs, nX, nY, nZ, direction_size, time, tau, gamma_dot, c_s, boundary_condition, density_field, velocity_field, previous_particle_distributions, particle_distributions, directions, weights, reverse_indexes);
 		#endif
+		time += runs-1;
 
-		if((i) % save_every == 0) {
-            double percentage = (double) (i) / (double) (runs) * 100.0;
-            std::cout << "Saving data - " << (i) << "/" << runs << " (" << percentage << "%)" << '\n';
-			output_lbm_data(testFolder + std::to_string(i) + ".csv", true, nX, nY, nZ, density_field, velocity_field);
-			
-            //output_velocity(nX, nY, velocity_field);
-        }
-	}
 	 __sync_synchronize(); 
 	std::cout << std::endl;
 
-	check_solution(soluFolder,testFolder, runs, nX,nY,nZ, density_field, velocity_field);
+	output_lbm_data(testFolder + std::to_string(time) + ".csv", true, nX, nY, nZ, density_field, velocity_field);	
+	check_solution(soluFolder,testFolder, time, nX,nY,nZ, density_field, velocity_field);
+    std::cout << "The simulation was performed with an average speed of  "  << measure << " mili-seconds per iteration" << std::endl;;
 
 	return 0;
 }
+
+
+
+
+
+
+
+    // for(int i = 1; i <= runs; i++) {		
+	// 	#ifdef LBM_STRUCT
+	// 	perform_timestep(S, i);
+	// 	#else
+	// 	perform_timestep(nX, nY, nZ, direction_size, i, tau, gamma_dot, c_s, boundary_condition, density_field, velocity_field, previous_particle_distributions, particle_distributions, directions, weights, reverse_indexes);
+	// 	#endif
+
+	// 	if((i) % save_every == 0) {
+    //         double percentage = (double) (i) / (double) (runs) * 100.0;
+    //         std::cout << "Saving data - " << (i) << "/" << runs << " (" << percentage << "%)" << '\n';
+	// 		output_lbm_data(testFolder + std::to_string(i) + ".csv", true, nX, nY, nZ, density_field, velocity_field);
+			
+    //         //output_velocity(nX, nY, velocity_field);
+    //     }
+	// }
+	// check_solution(soluFolder,testFolder, runs, nX,nY,nZ, density_field, velocity_field);

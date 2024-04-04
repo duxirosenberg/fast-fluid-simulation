@@ -1,7 +1,4 @@
 #include "LBM.h"
-#include <stdlib.h>
-#include <string.h>
-#include <stdio.h>
 
 
 #ifdef LBM_STRUCT
@@ -293,5 +290,3 @@ void perform_timestep(struct LBM* S, int time) {
 }
 
 #endif
-
-// int time, double tau, double gamma_dot, double c_s, int boundary_condition,
