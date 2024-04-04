@@ -20,8 +20,8 @@ target_compile_definitions(interfaceStruct INTERFACE -DLBM_STRUCT )
 
 
 add_library(${CLIB} STATIC ${CMAKE_SOURCE_DIR}/clib/source/LBM.c )
-add_executable(main_cmdline  ${CMAKE_SOURCE_DIR}/lib/source/output.cpp ${CMAKE_SOURCE_DIR}/cmdline/main.cpp ${CMAKE_SOURCE_DIR}/clib/source/LBM.c )
-add_executable(main_cmdlineS ${CMAKE_SOURCE_DIR}/lib/source/output.cpp ${CMAKE_SOURCE_DIR}/cmdline/main.cpp ${CMAKE_SOURCE_DIR}/clib/source/LBMstruct.c )
+add_executable(main_cmdline  ${CMAKE_SOURCE_DIR}/lib/source/output.cpp ${CMAKE_SOURCE_DIR}/cmdline/main.cpp ${CMAKE_SOURCE_DIR}/clib/source/measurement.c ${CMAKE_SOURCE_DIR}/clib/source/LBM.c )
+add_executable(main_cmdlineS ${CMAKE_SOURCE_DIR}/lib/source/output.cpp ${CMAKE_SOURCE_DIR}/cmdline/main.cpp ${CMAKE_SOURCE_DIR}/clib/source/measurement.c ${CMAKE_SOURCE_DIR}/clib/source/LBMstruct.c )
 
 
 # target_include_directories(??)
