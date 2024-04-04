@@ -1,11 +1,13 @@
 {
-  "grid_size": [3,5,1],
-  "save_every": 200,
+  "grid_size": [8,4,2],
+  "save_every": 1,
   "c_s": 0.577350269,
-  "velocity_set": "D2Q9",
+  "velocity_set": "D3Q27",
   "nu": 0.16666666666,
   "tau": 1,
   "gamma_dot": 0.01,
-  "boundary_conditions": "p",
-  "n_steps": 1000
+  "boundary_conditions": "lees_edwards",
+  "n_steps": 10,
+  "outputFolder": "output/",
+  "solutionFolder": "outputSolution/"
 }
