@@ -43,23 +43,38 @@ int main(int argc, char** argv) {
     std::cout << "Please ensure that options.json exists. If not, it can be obtained from root directory of GitHub repo." << '\n';
     return -1;
   }
-	std::cout << "Do you want to clean the previous run? (1 - Yes, 0 - No): ";
-	int choice=1;
-	// std::cin >> choice;
-	if(choice == 1) {
-		#ifdef LBM_STRUCT
-		system("rm -rf outputS");
-		system("mkdir outputS");
-		#else
-		system("rm -rf output");
-		system("mkdir output");
-		#endif
-	}
 
 	std::ifstream t("options.json");
 	std::string str((std::istreambuf_iterator<char>(t)),std::istreambuf_iterator<char>());
 	rapidjson::Document d;
 	d.Parse(str.c_str());
+	
+
+	std::string testFolder = d["outputFolder"].GetString();
+	std::string soluFolder = d["solutionFolder"].GetString();
+
+	#ifdef LBM_STRUCT
+	testFolder.pop_back();
+	testFolder = testFolder + "Struct/";
+	#endif
+
+
+
+	// std::string testFolder = d["solutionFolder"].GetString;
+
+	std::cout << "Do you want to clean the previous run? (1 - Yes, 0 - No): ";
+	int choice=1;
+	// std::cin >> choice;
+	if(choice == 1) {
+		std::string remove_command = "rm -rf ./" + testFolder;
+		std::string mkdir_command = "mkdir ./" + testFolder;
+		std::string copy_command = "cp options.json ./" + testFolder;
+
+		system( remove_command.c_str());
+		system( mkdir_command.c_str());
+		system( copy_command.c_str());
+	}
+
 	Value& save_every_value = d["save_every"];
 	int save_every = save_every_value.GetInt();
 	std::cout << "Save every: " << save_every << '\n';
@@ -202,15 +217,13 @@ int main(int argc, char** argv) {
 	#endif
 
 
-	#ifdef LBM_STRUCT
-	output_lbm_data("outputS/0.csv", true, nX, nY, nZ, density_field, velocity_field);
-	#else
-	output_lbm_data("output/0.csv", true, nX, nY, nZ, density_field, velocity_field);
-	#endif
-	// here correct
+	output_lbm_data(testFolder + "0.csv", true, nX, nY, nZ, density_field, velocity_field);
+	output_indices_file(testFolder + "indices.csv", nX, nY, nZ);
 
+
+
+	 __sync_synchronize(); 
     for(int i = 1; i <= runs; i++) {
-		// std::cout << i << std::endl;
 		
 		#ifdef LBM_STRUCT
 		perform_timestep(S, i);
@@ -221,14 +234,15 @@ int main(int argc, char** argv) {
 		if((i) % save_every == 0) {
             double percentage = (double) (i) / (double) (runs) * 100.0;
             std::cout << "Saving data - " << (i) << "/" << runs << " (" << percentage << "%)" << '\n';
-			#ifdef LBM_STRUCT
-            output_lbm_data("outputS/" + std::to_string(i) + ".csv", true, nX, nY, nZ, density_field, velocity_field);
-			#else
-            output_lbm_data("output/" + std::to_string(i) + ".csv", true, nX, nY, nZ, density_field, velocity_field);
-			#endif
+			output_lbm_data(testFolder + std::to_string(i) + ".csv", true, nX, nY, nZ, density_field, velocity_field);
+			
             //output_velocity(nX, nY, velocity_field);
         }
 	}
+	 __sync_synchronize(); 
 	std::cout << std::endl;
+
+	check_solution(soluFolder,testFolder, runs, nX,nY,nZ, density_field, velocity_field);
+
 	return 0;
 }
