@@ -108,7 +108,7 @@ void compute_density_momentum_moment(struct LBM* S) {
 double calculate_feq( int feqIndex,
                       struct LBM* S,
                       int i
-                     ) {
+                     )                      {
     double velocityX = S->velocity_field[3 * feqIndex];
     double velocityY = S->velocity_field[3 * feqIndex + 1];
     double velocityZ = S->velocity_field[3 * feqIndex + 2];
@@ -284,12 +284,12 @@ void stream(struct LBM* S, int time) {
 }
 
 void perform_timestep(struct LBM* S, int time) {
-    //fprintf(stderr,"compute_density_momentum_moment \n");
-    compute_density_momentum_moment(S);
     //fprintf(stderr,"collision \n");
     collision(S);
     //fprintf(stderr,"stream \n");
     stream(S, time);
+    //fprintf(stderr,"compute_density_momentum_moment \n");
+    compute_density_momentum_moment(S); //problem
 }
 
 #endif

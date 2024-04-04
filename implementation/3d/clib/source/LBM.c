@@ -310,14 +310,14 @@ void perform_timestep(int nX, int nY, int nZ, int direction_size, int time, doub
                       const double* weights,
                       int* reverse_indexes
 ) {
-    //fprintf(stderr,"compute_density_momentum_moment \n");
-    compute_density_momentum_moment(nX, nY, nZ, direction_size, density_field, velocity_field, particle_distributions, directions);
-
     //fprintf(stderr,"collision \n");
     collision(nX, nY, nZ, direction_size, tau, c_s, density_field, velocity_field, previous_particle_distributions, particle_distributions, directions, weights);
 
     //fprintf(stderr,"stream \n");
     stream(nX, nY, nZ, direction_size, time, gamma_dot, c_s, boundary_condition, density_field, velocity_field, previous_particle_distributions, particle_distributions, directions, weights, reverse_indexes);
+    
+    //fprintf(stderr,"compute_density_momentum_moment \n");
+    compute_density_momentum_moment(nX, nY, nZ, direction_size, density_field, velocity_field, particle_distributions, directions);
 }
 
 #endif
