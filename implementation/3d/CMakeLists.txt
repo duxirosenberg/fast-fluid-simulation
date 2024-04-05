@@ -11,17 +11,22 @@ include_directories("${CMAKE_SOURCE_DIR}/clib" "${CMAKE_SOURCE_DIR}/clib/headers
 find_package (Threads)
 
 
-add_library( interfaceBase INTERFACE )
-target_compile_definitions(interfaceBase INTERFACE)
+add_library( interfaceOld INTERFACE )
+target_compile_definitions(interfaceOld INTERFACE)
 
 add_library( interfaceStruct INTERFACE )
 target_compile_definitions(interfaceStruct INTERFACE -DLBM_STRUCT )
 
 
+add_library( interfaceBase INTERFACE )
+target_compile_definitions(interfaceBase INTERFACE -DLBM_STRUCT -DLBM_BASELINE)
+
+
 
 add_library(${CLIB} STATIC ${CMAKE_SOURCE_DIR}/clib/source/LBM.c )
-add_executable(main_cmdline  ${CMAKE_SOURCE_DIR}/lib/source/output.cpp ${CMAKE_SOURCE_DIR}/cmdline/main.cpp ${CMAKE_SOURCE_DIR}/clib/source/measurement.c ${CMAKE_SOURCE_DIR}/clib/source/LBM.c )
-add_executable(main_cmdlineS ${CMAKE_SOURCE_DIR}/lib/source/output.cpp ${CMAKE_SOURCE_DIR}/cmdline/main.cpp ${CMAKE_SOURCE_DIR}/clib/source/measurement.c ${CMAKE_SOURCE_DIR}/clib/source/LBMstruct.c )
+add_executable(main_cmdlineOld  ${CMAKE_SOURCE_DIR}/lib/source/output.cpp ${CMAKE_SOURCE_DIR}/cmdline/main.cpp ${CMAKE_SOURCE_DIR}/clib/source/measurement.c ${CMAKE_SOURCE_DIR}/clib/source/LBM.c )
+add_executable(main_cmdline ${CMAKE_SOURCE_DIR}/lib/source/output.cpp ${CMAKE_SOURCE_DIR}/cmdline/main.cpp ${CMAKE_SOURCE_DIR}/clib/source/measurement.c ${CMAKE_SOURCE_DIR}/clib/source/LBMstruct.c )
+add_executable(main_cmdlineBaseline ${CMAKE_SOURCE_DIR}/lib/source/output.cpp ${CMAKE_SOURCE_DIR}/cmdline/main.cpp ${CMAKE_SOURCE_DIR}/clib/source/measurement.c ${CMAKE_SOURCE_DIR}/clib/source/LBMbaseline.c )
 
 
 # target_include_directories(??)
@@ -34,8 +39,9 @@ PRIVATE
   ${CMAKE_SOURCE_DIR}/cmdline/fast-cpp-csv-parser/csv.h
 )
 
-target_link_libraries(main_cmdline ${CMAKE_THREAD_LIBS_INIT} ${CLIB} interfaceBase)
-target_link_libraries(main_cmdlineS ${CMAKE_THREAD_LIBS_INIT} ${CLIB} interfaceStruct)
+target_link_libraries(main_cmdlineOld ${CMAKE_THREAD_LIBS_INIT} ${CLIB} interfaceOld)
+target_link_libraries(main_cmdline ${CMAKE_THREAD_LIBS_INIT} ${CLIB} interfaceStruct)
+target_link_libraries(main_cmdlineBaseline ${CMAKE_THREAD_LIBS_INIT} ${CLIB} interfaceBase)
 
 
 

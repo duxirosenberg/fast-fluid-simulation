@@ -53,9 +53,19 @@ int main(int argc, char** argv) {
 	std::string testFolder = d["outputFolder"].GetString();
 	std::string soluFolder = d["solutionFolder"].GetString();
 
+	#ifndef LBM_STRUCT
+	testFolder.pop_back();
+	testFolder = testFolder + "Old/";
+	#endif
+
+
 	#ifdef LBM_STRUCT
 	testFolder.pop_back();
 	testFolder = testFolder + "Struct/";
+	#endif
+
+	#ifdef LBM_BASELINE
+	testFolder = soluFolder;
 	#endif
 
 
@@ -236,7 +246,10 @@ int main(int argc, char** argv) {
 	std::cout << std::endl;
 
 	output_lbm_data(testFolder + std::to_string(time) + ".csv", true, nX, nY, nZ, density_field, velocity_field);	
+	
+	#ifndef LBM_BASELINE
 	check_solution(soluFolder,testFolder, time, nX,nY,nZ, density_field, velocity_field);
+	#endif
     std::cout << "The simulation was performed with an average speed of  "  << measure << " mili-seconds per iteration" << std::endl;;
 
 	return 0;
