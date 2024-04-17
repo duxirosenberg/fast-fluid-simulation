@@ -255,25 +255,3 @@ int main(int argc, char** argv) {
 	return 0;
 }
 
-
-
-
-
-
-
-    // for(int i = 1; i <= runs; i++) {		
-	// 	#ifdef LBM_STRUCT
-	// 	perform_timestep(S, i);
-	// 	#else
-	// 	perform_timestep(nX, nY, nZ, direction_size, i, tau, gamma_dot, c_s, boundary_condition, density_field, velocity_field, previous_particle_distributions, particle_distributions, directions, weights, reverse_indexes);
-	// 	#endif
-
-	// 	if((i) % save_every == 0) {
-    //         double percentage = (double) (i) / (double) (runs) * 100.0;
-    //         std::cout << "Saving data - " << (i) << "/" << runs << " (" << percentage << "%)" << '\n';
-	// 		output_lbm_data(testFolder + std::to_string(i) + ".csv", true, nX, nY, nZ, density_field, velocity_field);
-			
-    //         //output_velocity(nX, nY, velocity_field);
-    //     }
-	// }
-	// check_solution(soluFolder,testFolder, runs, nX,nY,nZ, density_field, velocity_field);

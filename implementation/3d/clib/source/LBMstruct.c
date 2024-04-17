@@ -44,37 +44,6 @@ void initialize(int nX, int nY, int nZ, int direction_size,
         }
     }
 }
-// void initializeS(struct LBM* S) {
-//     for(int i = 0; i < S->direction_size; i++) {
-//         for(int j = 0; j < S->direction_size; j++) {
-//             if(S->directions[3 * i] == -S->directions[3 * j] && S->directions[3 * i + 1] == -S->directions[3 * j + 1] && S->directions[3 * i + 2] == -S->directions[3 * j + 2]) {
-//                 S->reverse_indexes[i] = j;
-//             }
-//         }
-//     }
-
-//     int box_flatten_length = S->nX * S->nY * S->nZ;
-
-//     for(int i = 0; i < box_flatten_length; i++) {
-//         S->density_field[i] = 1;
-//     }
-
-//     for(int i = 0; i < 3 * box_flatten_length; i++) {
-//         S->velocity_field[i] = 0;
-//     }
-
-//     for(int x = 0; x < S->nX; x++) {
-//         for(int y = 0; y < S->nY; y++) {
-//             for(int z = 0; z < S->nZ; z++) {
-//                 for(int i = 0; i < S->direction_size; i++) {
-//                     int index = x + y * S->nX + z * S->nX * S->nY + i * S->nX * S->nY * S->nZ;
-//                     S->previous_particle_distributions[index] = S->weights[i];
-//                     S->particle_distributions[index] = S->weights[i];
-//                 }
-//             }
-//         }
-//     }
-// }
 
 void compute_density_momentum_moment(struct LBM* S) {
     for(int x = 0; x < S->nX; x++) {
