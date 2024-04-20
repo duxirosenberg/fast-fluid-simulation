@@ -43,18 +43,45 @@ int main(int argc, char** argv) {
     std::cout << "Please ensure that options.json exists. If not, it can be obtained from root directory of GitHub repo." << '\n';
     return -1;
   }
-	std::cout << "Do you want to clean the previous run? (1 - Yes, 0 - No): ";
-	int choice;
-	std::cin >> choice;
-	if(choice == 1) {
-		system("rm -rf output");
-		system("mkdir output");
-	}
 
 	std::ifstream t("options.json");
 	std::string str((std::istreambuf_iterator<char>(t)),std::istreambuf_iterator<char>());
 	rapidjson::Document d;
 	d.Parse(str.c_str());
+	
+
+	std::string testFolder = d["outputFolder"].GetString();
+	std::string soluFolder = d["solutionFolder"].GetString();
+
+	#ifndef LBM_STRUCT
+	testFolder.pop_back();
+	testFolder = testFolder + "Old/";
+	#endif
+
+
+	#ifdef LBM_STRUCT
+	testFolder.pop_back();
+	testFolder = testFolder + "Struct/";
+	#endif
+
+	#ifdef LBM_BASELINE
+	testFolder = soluFolder;
+	#endif
+
+
+	std::cout << "Do you want to clean the previous run? (1 - Yes, 0 - No): ";
+	int choice=1;
+	// std::cin >> choice;
+	if(choice == 1) {
+		std::string remove_command = "rm -rf ./" + testFolder;
+		std::string mkdir_command = "mkdir ./" + testFolder;
+		std::string copy_command = "cp options.json ./" + testFolder;
+
+		system( remove_command.c_str());
+		system( mkdir_command.c_str());
+		system( copy_command.c_str());
+	}
+
 	Value& save_every_value = d["save_every"];
 	int save_every = save_every_value.GetInt();
 	std::cout << "Save every: " << save_every << '\n';
@@ -181,20 +208,50 @@ int main(int argc, char** argv) {
 	std::cout << "Kinematic shear viscosity: " << viscosity << '\n';
     //Equation 4.4.49
     std::cout << "For velocity set D2Q9,D3Q15 and D3Q27, |u_max|<0.577\n";
-	output_lbm_data("output/0.csv", true, nX, nY, nZ, density_field, velocity_field);
-	output_indices_file(nX, nY, nZ);
+
+
 	int scale = 1;
 	int runs = n_steps * scale * scale * scale;
-    // In the original the time always gets incremented before a time step is performed, so it starts with 1 and goes to runs
-    for(int i = 1; i <= runs; i++) {
-		perform_timestep(nX, nY, nZ, direction_size, i, tau, gamma_dot, c_s, boundary_condition, density_field, velocity_field, previous_particle_distributions, particle_distributions, directions, weights, reverse_indexes);
-		if((i+1) % save_every == 0) {
-            double percentage = (double) (i + 1) / (double) (runs) * 100.0;
-            std::cout << "Saving data - " << (i + 1) << "/" << runs << " (" << percentage << "%)" << '\n';
-            output_lbm_data("output/" + std::to_string(i + 1) + ".csv", true, nX, nY, nZ, density_field, velocity_field);
-            //output_velocity(nX, nY, velocity_field);
-        }
-	}
+
+
+	#ifdef LBM_STRUCT
+	LBM solver{	nX, nY, nZ, direction_size, density_field, velocity_field, 
+				previous_particle_distributions, particle_distributions, reverse_indexes, directions, weights, 
+				c_s, tau, gamma_dot, boundary_condition};
+
+	LBM* S =  &solver;
+	std::cout << "solver allocated" << std::endl;
+	#endif
+
+
+	output_lbm_data(testFolder + "0.csv", true, nX, nY, nZ, density_field, velocity_field);
+	output_indices_file(testFolder + "indices.csv", nX, nY, nZ);
+
+	double measure;
+	int time = 1; // time
+	int* a = &time;
+
+
+	__sync_synchronize(); 
+
+		measure =
+		#ifdef LBM_STRUCT 
+		perform_Measurement(runs, S, time );
+		#else
+		perform_Measurement(runs, nX, nY, nZ, direction_size, time, tau, gamma_dot, c_s, boundary_condition, density_field, velocity_field, previous_particle_distributions, particle_distributions, directions, weights, reverse_indexes);
+		#endif
+		time += runs-1;
+
+	 __sync_synchronize(); 
 	std::cout << std::endl;
+
+	output_lbm_data(testFolder + std::to_string(time) + ".csv", true, nX, nY, nZ, density_field, velocity_field);	
+	
+	#ifndef LBM_BASELINE
+	check_solution(soluFolder,testFolder, time, nX,nY,nZ, density_field, velocity_field);
+	#endif
+    std::cout << "The simulation was performed with an average speed of  "  << measure << " mili-seconds per iteration" << std::endl;;
+
 	return 0;
 }
+

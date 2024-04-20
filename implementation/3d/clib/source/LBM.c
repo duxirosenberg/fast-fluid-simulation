@@ -1,7 +1,6 @@
 #include "LBM.h"
-#include <stdlib.h>
-#include <string.h>
-#include <stdio.h>
+
+#ifndef LBM_STRUCT
 
 void initialize(int nX, int nY, int nZ, int direction_size,
                 double* density_field,
@@ -104,7 +103,8 @@ double calculate_feq_u(int index,
     double velocityZ = velocity_field[3 * index + 2];
     double dot_product = velocityX * directionX + velocityY * directionY + velocityZ * directionZ;
     // TODO johannes: Check if this is actually correct, the directions seem like typos imo
-    double norm_square = velocityX * velocityX + velocityY * directionY + velocityZ * directionZ;
+    // double norm_square = velocityX * velocityX + velocityY * directionY + velocityZ * directionZ;
+    double norm_square = velocityX * velocityX + velocityY * velocityY + velocityZ * velocityZ;
     //Equation 3.4 with c_s^2 = 1/3
     return weight * density_field[index] * (1.0 + dot_product / (c_s * c_s) + dot_product * dot_product / (2 * c_s * c_s * c_s * c_s) - norm_square / (2 * c_s * c_s));
 }
@@ -307,13 +307,14 @@ void perform_timestep(int nX, int nY, int nZ, int direction_size, int time, doub
                       const double* weights,
                       int* reverse_indexes
 ) {
-    //fprintf(stderr,"compute_density_momentum_moment \n");
-    compute_density_momentum_moment(nX, nY, nZ, direction_size, density_field, velocity_field, particle_distributions, directions);
-
     //fprintf(stderr,"collision \n");
     collision(nX, nY, nZ, direction_size, tau, c_s, density_field, velocity_field, previous_particle_distributions, particle_distributions, directions, weights);
 
     //fprintf(stderr,"stream \n");
     stream(nX, nY, nZ, direction_size, time, gamma_dot, c_s, boundary_condition, density_field, velocity_field, previous_particle_distributions, particle_distributions, directions, weights, reverse_indexes);
+
+    //fprintf(stderr,"compute_density_momentum_moment \n");
+    compute_density_momentum_moment(nX, nY, nZ, direction_size, density_field, velocity_field, particle_distributions, directions);
 }
 
+#endif
