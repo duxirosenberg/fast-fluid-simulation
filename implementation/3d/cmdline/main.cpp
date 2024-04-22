@@ -1,17 +1,14 @@
-#include <stdio.h>
 #include <iostream>
 #include <fstream>
 #include <streambuf>
 //Now Linux only.
-#include <sys/types.h>
 #include <sys/stat.h>
-#include <unistd.h>
 #include "output.hpp"
 //RapidJSON files.
 #include "document.h"
-#include "writer.h"
 #include "stringbuffer.h"
 #include "csv.h"
+#include "utils.h"
 
 extern "C" {
     #include "LBM.h"
@@ -20,23 +17,9 @@ extern "C" {
 using namespace rapidjson;
 
 inline bool file_exists (const std::string& name) {
-  struct stat buffer;
+  struct stat buffer{};
   return (stat (name.c_str(), &buffer) == 0);
 }
-
-const int D2Q9_DIRECTIONS[] = { 1,0,0, 0,1,0, -1,0,0, 0,-1,0, 1,1,0, -1,1,0, -1,-1,0, 1,-1,0, 0,0,0};
-const double D2Q9_WEIGHTS[] = {1.0/9.0,1.0/9.0,1.0/9.0,1.0/9.0,1.0/36.0,1.0/36.0,1.0/36.0,1.0/36.0,4.0/9.0};
-
-const int D3Q15_DIRECTIONS[] = { 0,0,0, 1,0,0, -1,0,0, 0,1,0, 0,-1,0, 0,0,1, 0,0,-1, 1,1,1, -1,-1,-1, 1,1,-1, -1,-1,1, 1,-1,1, -1,1,-1, -1,1,1, 1,-1,-1 };
-const double D3Q15_WEIGHTS[] = { 2.0/9.0, 1.0/9.0, 1.0/9.0, 1.0/9.0, 1.0/9.0, 1.0/9.0, 1.0/9.0,1.0/72.0, 1.0/72.0, 1.0/72.0, 1.0/72.0, 1.0/72.0, 1.0/72.0, 1.0/72.0, 1.0/72.0  };
-
-const int D3Q27_DIRECTIONS[] = { 0,0,0,  1,0,0, -1,0,0,0,1,0, 0,-1,0, 0,0,1,
-                                 0,0,-1, 1,1,0, -1,-1,0,1,0,1,-1,0,-1, 0,1,1,
-                                 0,-1,-1, 1,-1,0, -1,1,0,1,0,-1, -1,0,1,0,1,-1,
-                                 0,-1,1, 1,1,1, -1,-1,-1,1,1,-1, -1,-1,1, 1,-1,1,
-                                 -1,1,-1, -1,1,1, 1,-1,-1};
-const double D3Q27_WEIGHTS[] = {8.0/27.0,2.0/27.0,2.0/27.0,2.0/27.0,2.0/27.0,2.0/27.0,2.0/27.0, 1.0/54.0,1.0/54.0,1.0/54.0,1.0/54.0,1.0/54.0,1.0/54.0,1.0/54.0,1.0/54.0,1.0/54.0,1.0/54.0,1.0/54.0,1.0/54.0, 1.0/216.0, 1.0/216.0, 1.0/216.0, 1.0/216.0,1.0/216.0, 1.0/216.0, 1.0/216.0, 1.0/216.0};
-
 
 int main(int argc, char** argv) {
   if(!file_exists("options.json")) {
@@ -68,10 +51,9 @@ int main(int argc, char** argv) {
 	testFolder = soluFolder;
 	#endif
 
-
 	std::cout << "Do you want to clean the previous run? (1 - Yes, 0 - No): ";
-	int choice=1;
-	// std::cin >> choice;
+	int choice = 1;
+	std::cin >> choice;
 	if(choice == 1) {
 		std::string remove_command = "rm -rf ./" + testFolder;
 		std::string mkdir_command = "mkdir ./" + testFolder;
@@ -145,15 +127,13 @@ int main(int argc, char** argv) {
 
     std::cout << "Initializing Arrays" << std::endl;
 
-
-
     int box_flatten_length = nX * nY * nZ;
     int distributions_flatten_length = box_flatten_length * direction_size;
 
-    double* density_field = (double*) malloc(box_flatten_length * sizeof(double));
-    double* velocity_field = (double*) malloc(3 * box_flatten_length * sizeof(double));
-    double* previous_particle_distributions = (double*) malloc(distributions_flatten_length * sizeof(double));
-    double* particle_distributions = (double*) malloc(distributions_flatten_length * sizeof(double));
+    auto density_field = (double*) malloc(box_flatten_length * sizeof(double));
+    auto velocity_field = (double*) malloc(3 * box_flatten_length * sizeof(double));
+    auto previous_particle_distributions = (double*) malloc(distributions_flatten_length * sizeof(double));
+    auto particle_distributions = (double*) malloc(distributions_flatten_length * sizeof(double));
     int* reverse_indexes = (int*) malloc(direction_size * sizeof(int));
     const int* directions;
     const double* weights;
@@ -179,7 +159,6 @@ int main(int argc, char** argv) {
 			return 0;
 		}
 	}
-
 
 	if(file_exists("ic.csv")) {
 		std::cout << "Loading initial conditions" << '\n';
@@ -219,38 +198,26 @@ int main(int argc, char** argv) {
 				previous_particle_distributions, particle_distributions, reverse_indexes, directions, weights, 
 				c_s, tau, gamma_dot, boundary_condition};
 
-	LBM* S =  &solver;
+	LBM* S = &solver;
 	std::cout << "solver allocated" << std::endl;
 	#endif
-
 
 	output_lbm_data(testFolder + "0.csv", true, nX, nY, nZ, density_field, velocity_field);
 	output_indices_file(testFolder + "indices.csv", nX, nY, nZ);
 
-	double measure;
-	int time = 1; // time
-	int* a = &time;
-
-
-	__sync_synchronize(); 
-
-		measure =
-		#ifdef LBM_STRUCT 
-		perform_Measurement(runs, S, time );
-		#else
-		perform_Measurement(runs, nX, nY, nZ, direction_size, time, tau, gamma_dot, c_s, boundary_condition, density_field, velocity_field, previous_particle_distributions, particle_distributions, directions, weights, reverse_indexes);
-		#endif
-		time += runs-1;
-
-	 __sync_synchronize(); 
-	std::cout << std::endl;
-
-	output_lbm_data(testFolder + std::to_string(time) + ".csv", true, nX, nY, nZ, density_field, velocity_field);	
-	
-	#ifndef LBM_BASELINE
-	check_solution(soluFolder,testFolder, time, nX,nY,nZ, density_field, velocity_field);
-	#endif
-    std::cout << "The simulation was performed with an average speed of  "  << measure << " mili-seconds per iteration" << std::endl;;
+    for(int i = 1; i <= runs; i++) {
+        #ifdef LBM_STRUCT
+        perform_timestep_struct(S, i);
+        #else
+        perform_timestep_array(nX, nY, nZ, direction_size, i, tau, gamma_dot, c_s, boundary_condition, density_field, velocity_field, previous_particle_distributions, particle_distributions, directions, weights, reverse_indexes);
+        #endif
+        if((i+1) % save_every == 0) {
+            double percentage = (double) (i + 1) / (double) (runs) * 100.0;
+            std::cout << "Saving data - " << (i + 1) << "/" << runs << " (" << percentage << "%)" << '\n';
+            output_lbm_data("output/" + std::to_string(i + 1) + ".csv", true, nX, nY, nZ, density_field, velocity_field);
+            //output_velocity(nX, nY, velocity_field);
+        }
+    }
 
 	return 0;
 }

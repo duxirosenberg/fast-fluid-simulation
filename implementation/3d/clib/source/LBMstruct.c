@@ -1,51 +1,6 @@
 #include "LBM.h"
 
-
-#ifdef LBM_STRUCT
-
-void initialize(int nX, int nY, int nZ, int direction_size,
-                double* density_field,
-                double* velocity_field,
-                double* previous_particle_distributions,
-                double* particle_distributions,
-                const int* directions,
-                const double* weights,
-                int* reverse_indexes
-                ) {
-
-
-    for(int i = 0; i < direction_size; i++) {
-        for(int j = 0; j < direction_size; j++) {
-            if(directions[3 * i] == -directions[3 * j] && directions[3 * i + 1] == -directions[3 * j + 1] && directions[3 * i + 2] == -directions[3 * j + 2]) {
-                reverse_indexes[i] = j;
-            }
-        }
-    }
-
-    int box_flatten_length = nX * nY * nZ;
-
-    for(int i = 0; i < box_flatten_length; i++) {
-        density_field[i] = 1;
-    }
-
-    for(int i = 0; i < 3 * box_flatten_length; i++) {
-        velocity_field[i] = 0;
-    }
-
-    for(int x = 0; x < nX; x++) {
-        for(int y = 0; y < nY; y++) {
-            for(int z = 0; z < nZ; z++) {
-                for(int i = 0; i < direction_size; i++) {
-                    int index = x + y * nX + z * nX * nY + i * nX * nY * nZ;
-                    previous_particle_distributions[index] = weights[i];
-                    particle_distributions[index] = weights[i];
-                }
-            }
-        }
-    }
-}
-
-void compute_density_momentum_moment(struct LBM* S) {
+static void compute_density_momentum_moment(struct LBM* S) {
     for(int x = 0; x < S->nX; x++) {
         for(int y = 0; y < S->nY; y++) {
             for(int z = 0; z < S->nZ; z++) {
@@ -71,7 +26,7 @@ void compute_density_momentum_moment(struct LBM* S) {
     }
 }
 
-double calculate_feq( int feqIndex,
+static double calculate_feq( int feqIndex,
                       struct LBM* S,
                       int i
                      )                      {
@@ -90,7 +45,7 @@ double calculate_feq( int feqIndex,
 }
 
 
-double calculate_feq_u(int index, double u_le_x, struct LBM* S, int directionX, int directionY, int directionZ, double weight) {
+static double calculate_feq_u(int index, double u_le_x, struct LBM* S, int directionX, int directionY, int directionZ, double weight) {
     double velocityX = S->velocity_field[3 * index] + u_le_x;
     double velocityY = S->velocity_field[3 * index + 1];
     double velocityZ = S->velocity_field[3 * index + 2];
@@ -100,7 +55,7 @@ double calculate_feq_u(int index, double u_le_x, struct LBM* S, int directionX, 
     return weight * S->density_field[index] * (1.0 + dot_product / (S->c_s * S->c_s) + dot_product * dot_product / (2 * S->c_s * S->c_s * S->c_s * S->c_s) - norm_square / (2 * S->c_s * S->c_s));
 }
 
-void collision(struct LBM* S) {
+static void collision(struct LBM* S) {
     const double tauinv = 1.0 / S->tau;
     const double omtauinv = 1.0 - tauinv;
 
@@ -119,7 +74,8 @@ void collision(struct LBM* S) {
         }
     }
 }
-void periodic_boundary_condition(struct LBM* S) {
+
+static void periodic_boundary_condition(struct LBM* S) {
     for(int x = 0; x < S->nX; x++) {
         for (int y = 0; y < S->nY; y++) {
             for (int z = 0; z < S->nZ; z++) {
@@ -136,7 +92,8 @@ void periodic_boundary_condition(struct LBM* S) {
         }
     }
 }
-void couette_boundary_condition(struct LBM* S) {
+
+static void couette_boundary_condition(struct LBM* S) {
     double c_s_square = S->c_s * S->c_s;
     for(int x = 0; x < S->nX; x++) {
         for (int y = 0; y < S->nY; y++) {
@@ -171,7 +128,7 @@ void couette_boundary_condition(struct LBM* S) {
     }
 }
 
-void lees_edwards_boundary_condition(struct LBM* S, int time) {
+static void lees_edwards_boundary_condition(struct LBM* S, int time) {
     double d_x = S->gamma_dot * (double)S->nY * (double)time;
     int d_x_I = d_x;
     double d_x_R = d_x - (double)d_x_I;
@@ -239,7 +196,8 @@ void lees_edwards_boundary_condition(struct LBM* S, int time) {
         }
     }
 }
-void stream(struct LBM* S, int time) {
+
+static void stream(struct LBM* S, int time) {
     if (S->boundary_condition == 1) {
         periodic_boundary_condition(S);
     } else if (S->boundary_condition == 2) {
@@ -249,7 +207,7 @@ void stream(struct LBM* S, int time) {
     }
 }
 
-void perform_timestep(struct LBM* S, int time) {
+void perform_timestep_struct(struct LBM* S, int time) {
     //fprintf(stderr,"collision \n");
     collision(S);
     //fprintf(stderr,"stream \n");
@@ -257,5 +215,3 @@ void perform_timestep(struct LBM* S, int time) {
     //fprintf(stderr,"compute_density_momentum_moment \n");
     compute_density_momentum_moment(S); //problem
 }
-
-#endif
