@@ -3,12 +3,18 @@
 #include <string>
 #include "tsc_x86.h"
 #include "utils.h"
-#include "LBM.h"
 
 using namespace std;
 
 #define CYCLES_REQUIRED 1e9
 #define REP 10
+#define TIME_STEPS 20
+#define N_X 10
+#define N_Y 15
+#define N_Z 20
+#define C_S 0.6
+#define TAU 0.75
+#define GAMMA_DOT 0.01
 #define TIME_STEPS 20
 #define EPS 1e-3
 
@@ -33,15 +39,15 @@ void add_struct_func(comp_func_struct f, const char* name, int flops) {
     funcFlopsStruct.push_back(flops);
 }
 
-struct LBM* init_struct(int direction_size, int boundary_condition) {
-    auto solver = (LBM*) malloc(sizeof(LBM));
-    solver->nX = 10;
-    solver->nY = 15;
-    solver->nZ = 20;
+struct LBMarrays* init_struct(int direction_size, int boundary_condition) {
+    auto solver = (LBMarrays*) malloc(sizeof(LBMarrays));
+    solver->nX = N_X;
+    solver->nY = N_Y;
+    solver->nZ = N_Z;
     solver->direction_size = direction_size; // One of 9, 15, 27
-    solver->c_s = 0.6;
-    solver->tau = 0.75;
-    solver->gamma_dot = 0.01;
+    solver->c_s = C_S;
+    solver->tau = TAU;
+    solver->gamma_dot = GAMMA_DOT;
     solver->boundary_condition = boundary_condition; // 1=periodic, 2=couette, 3=lees_edwards
 
     int box_flatten_length = solver->nX * solver->nY * solver->nZ;
@@ -68,7 +74,7 @@ struct LBM* init_struct(int direction_size, int boundary_condition) {
 }
 
 
-void free_struct(LBM* solver) {
+void free_struct(LBMarrays* solver) {
     free(solver->density_field);
     free(solver->velocity_field);
     free(solver->previous_particle_distributions);
@@ -81,7 +87,7 @@ myInt64 time_func_struct(comp_func_struct f, long num_runs) {
     myInt64 start;
     myInt64 total = 0;
     for(int i = 0; i < num_runs; i++) {
-        LBM* solver = init_struct(27, 3);
+        LBMarrays* solver = init_struct(27, 3);
         start = start_tsc();
         for(int j = 0; j < TIME_STEPS; j++) {
             f(solver, j);
@@ -97,7 +103,7 @@ myInt64 time_func_array(comp_func_arrays f, long num_runs) {
     myInt64 start;
     myInt64 total = 0;
     for(int i = 0; i < num_runs; i++) {
-        LBM *solver = init_struct(27, 3);
+        LBMarrays *solver = init_struct(27, 3);
         start = start_tsc();
         for (int j = 0; j < TIME_STEPS; j++) {
             f(
@@ -169,7 +175,7 @@ double time_function_array(comp_func_arrays f, int flops) {
 }
 
 
-int check_equality(LBM* solver1, LBM* solver2) {
+int check_equality(LBMarrays* solver1, LBMarrays* solver2) {
     int nX = solver1->nX;
     int nY = solver1->nX;
     int nZ = solver1->nZ;
@@ -226,7 +232,7 @@ int main(int argc, char **argv) {
     cout << "[2/3] Testing correctness:" << endl;
 
     // initialize
-    struct LBM* baseline_solver = init_struct(27, 3);
+    struct LBMarrays* baseline_solver = init_struct(27, 3);
     // Run the baseline to compare the other functions to
     cout << "       Testing [1/" << numFuncs << "]: Currently Calculating Baseline " << endl;
     for(int i = 0; i < TIME_STEPS; i++) {
@@ -237,7 +243,7 @@ int main(int argc, char **argv) {
     for (int i = 0; i < lbmFuncsStruct.size(); i++) {
         // Run the function to be tested
         cout << "       Testing [" << i + 2 << "/" << numFuncs << "]: Function \"" << funcNamesStruct[i] << "\"" << endl;
-        struct LBM* solver = init_struct(27, 3);
+        struct LBMarrays* solver = init_struct(27, 3);
         for(int j = 0; j < TIME_STEPS; j++) {
             lbmFuncsStruct[i](solver, j);
         }
@@ -248,7 +254,7 @@ int main(int argc, char **argv) {
     for (int i = 0; i < lbmFuncsArrays.size(); i++) {
         // Run the function to be tested
         cout << "       Testing [" << lbmFuncsArrays.size() + i + 2 << "/" << numFuncs << "]: Function \"" << funcNamesArrays[i] << "\"" << endl;
-        struct LBM* solver = init_struct(27, 3);
+        struct LBMarrays* solver = init_struct(27, 3);
         for(int j = 0; j < TIME_STEPS; j++) {
             lbmFuncsArrays[i](
                     solver->nX, solver->nY, solver->nZ, solver->direction_size, j, solver->tau, solver->gamma_dot, solver->c_s, solver->boundary_condition,

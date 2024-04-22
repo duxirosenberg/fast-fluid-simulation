@@ -1,6 +1,7 @@
 #include "LBM.h"
+#include "LBMFunctions.h"
 
-static void compute_density_momentum_moment(struct LBM* S) {
+static void compute_density_momentum_moment(struct LBMarrays* S) {
     for(int x = 0; x < S->nX; x++) {
         for(int y = 0; y < S->nY; y++) {
             for(int z = 0; z < S->nZ; z++) {
@@ -27,7 +28,7 @@ static void compute_density_momentum_moment(struct LBM* S) {
 }
 
 static double calculate_feq( int feqIndex,
-                      struct LBM* S,
+                      struct LBMarrays* S,
                       int i
                      )                      {
     double velocityX = S->velocity_field[3 * feqIndex];
@@ -44,7 +45,7 @@ static double calculate_feq( int feqIndex,
     return weight * S->density_field[feqIndex] * (1.0 + dot_product / (S->c_s * S->c_s) + dot_product * dot_product / (2 * S->c_s * S->c_s * S->c_s * S->c_s) - norm_square / (2 * S->c_s * S->c_s));
 }
 
-static double calculate_feq_u(int index, double u_le_x, struct LBM* S, int directionX, int directionY, int directionZ, double weight) {
+static double calculate_feq_u(int index, double u_le_x, struct LBMarrays* S, int directionX, int directionY, int directionZ, double weight) {
     double velocityX = S->velocity_field[3 * index] + u_le_x;
     double velocityY = S->velocity_field[3 * index + 1];
     double velocityZ = S->velocity_field[3 * index + 2];
@@ -54,7 +55,7 @@ static double calculate_feq_u(int index, double u_le_x, struct LBM* S, int direc
     return weight * S->density_field[index] * (1.0 + dot_product / (S->c_s * S->c_s) + dot_product * dot_product / (2 * S->c_s * S->c_s * S->c_s * S->c_s) - norm_square / (2 * S->c_s * S->c_s));
 }
 
-static void collision(struct LBM* S) {
+static void collision(struct LBMarrays* S) {
     const double tauinv = 1.0 / S->tau;
     const double omtauinv = 1.0 - tauinv;
 
@@ -74,7 +75,7 @@ static void collision(struct LBM* S) {
     }
 }
 
-static void periodic_boundary_condition(struct LBM* S) {
+static void periodic_boundary_condition(struct LBMarrays* S) {
     for(int x = 0; x < S->nX; x++) {
         for (int y = 0; y < S->nY; y++) {
             for (int z = 0; z < S->nZ; z++) {
@@ -92,7 +93,7 @@ static void periodic_boundary_condition(struct LBM* S) {
     }
 }
 
-static void couette_boundary_condition(struct LBM* S) {
+static void couette_boundary_condition(struct LBMarrays* S) {
     double c_s_square = S->c_s * S->c_s;
     for(int x = 0; x < S->nX; x++) {
         for (int y = 0; y < S->nY; y++) {
@@ -127,7 +128,7 @@ static void couette_boundary_condition(struct LBM* S) {
     }
 }
 
-static void lees_edwards_boundary_condition(struct LBM* S, int time) {
+static void lees_edwards_boundary_condition(struct LBMarrays* S, int time) {
     double d_x = S->gamma_dot * (double)S->nY * (double)time;
     int d_x_I = d_x;
     double d_x_R = d_x - (double)d_x_I;
@@ -196,7 +197,7 @@ static void lees_edwards_boundary_condition(struct LBM* S, int time) {
     }
 }
 
-static void stream(struct LBM* S, int time) {
+static void stream(struct LBMarrays* S, int time) {
     if (S->boundary_condition == 1) {
         periodic_boundary_condition(S);
     } else if (S->boundary_condition == 2) {
@@ -206,7 +207,7 @@ static void stream(struct LBM* S, int time) {
     }
 }
 
-void perform_timestep_baseline(struct LBM* S, int time) {
+void perform_timestep_baseline(struct LBMarrays* S, int time) {
     //fprintf(stderr,"collision \n");
     collision(S);
     //fprintf(stderr,"stream \n");

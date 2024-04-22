@@ -1,4 +1,4 @@
-#include "LBM.h"
+#include "LBMFunctions.h"
 
 static void compute_density_momentum_moment(int nX, int nY, int nZ, int direction_size, double* density_field, double* velocity_field, double* particle_distributions, const int* directions) {
     for(int x = 0; x < nX; x++) {

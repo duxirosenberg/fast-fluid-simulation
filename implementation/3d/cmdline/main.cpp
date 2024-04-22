@@ -194,11 +194,11 @@ int main(int argc, char** argv) {
 
 
 	#ifdef LBM_STRUCT
-	LBM solver{	nX, nY, nZ, direction_size, density_field, velocity_field, 
-				previous_particle_distributions, particle_distributions, reverse_indexes, directions, weights, 
-				c_s, tau, gamma_dot, boundary_condition};
+	LBMarrays solver{nX, nY, nZ, direction_size, density_field, velocity_field,
+                     previous_particle_distributions, particle_distributions, reverse_indexes, directions, weights,
+                     c_s, tau, gamma_dot, boundary_condition};
 
-	LBM* S = &solver;
+	LBMarrays* S = &solver;
 	std::cout << "solver allocated" << std::endl;
 	#endif
 

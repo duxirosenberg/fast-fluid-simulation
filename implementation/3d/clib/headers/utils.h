@@ -6,19 +6,8 @@
 
 extern "C" {
     #include "LBM.h"
-}
-typedef void(*comp_func_struct)(struct LBM*, int);
-
-typedef void(*comp_func_arrays)(int, int, int, int, int, double, double, double, int, double*, double*, double*, double*, const int*, const double*, int*);
-
-// Function prototypes for registering and performing simulations
-void add_array_func(comp_func_arrays f, const char* name, int flops);
-void add_struct_func(comp_func_struct f, const char* name, int flops);
-
-
-static void register_functions() {
-    add_array_func(&perform_timestep_array, "Baseline - Arrays", 10);
-    add_struct_func(&perform_timestep_struct, "Baseline - Structs", 10);
+    #include "LBMFunctions.h"
+    #include "timing.h"
 }
 
 // Constants
