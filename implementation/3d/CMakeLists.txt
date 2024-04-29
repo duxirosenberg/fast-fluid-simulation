@@ -13,12 +13,12 @@ find_package (Threads)
 file(GLOB LBM_SOURCES ${CMAKE_SOURCE_DIR}/clib/source/*.c)
 
 add_library(${CLIB} STATIC ${LBM_SOURCES})
-add_executable(main_timing  ${CMAKE_SOURCE_DIR}/lib/source/output.cpp ${CMAKE_SOURCE_DIR}/cmdline/timing.cpp ${LBM_SOURCES})
-add_executable(main_cmdline ${CMAKE_SOURCE_DIR}/lib/source/output.cpp ${CMAKE_SOURCE_DIR}/cmdline/main.cpp ${LBM_SOURCES})
+add_executable(timing  ${CMAKE_SOURCE_DIR}/lib/source/output.cpp ${CMAKE_SOURCE_DIR}/cmdline/timing.cpp ${LBM_SOURCES})
+add_executable(cmdline ${CMAKE_SOURCE_DIR}/lib/source/output.cpp ${CMAKE_SOURCE_DIR}/cmdline/main.cpp ${LBM_SOURCES})
 
 
 # target_include_directories(??)
-target_sources(main_cmdline
+target_sources(cmdline
 PRIVATE
   ${CMAKE_SOURCE_DIR}/lib/source/output.cpp
   ${CMAKE_SOURCE_DIR}/cmdline/rapidjson/document.h
@@ -27,6 +27,6 @@ PRIVATE
   ${CMAKE_SOURCE_DIR}/cmdline/fast-cpp-csv-parser/csv.h
 )
 
-target_link_libraries(main_timing ${CMAKE_THREAD_LIBS_INIT} ${CLIB})
-target_link_libraries(main_cmdline ${CMAKE_THREAD_LIBS_INIT} ${CLIB})
+target_link_libraries(timing ${CMAKE_THREAD_LIBS_INIT} ${CLIB})
+target_link_libraries(cmdline ${CMAKE_THREAD_LIBS_INIT} ${CLIB})
 
