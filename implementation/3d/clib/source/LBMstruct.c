@@ -1,6 +1,8 @@
 #include "LBM.h"
 #include "LBMFunctions.h"
 
+// Flops: nX * nY * nZ * (3 + 4 * q)
+// Intops: nX * nY * nZ * (10 + 14 * q)
 static void compute_density_momentum_moment(struct LBMarrays* S) {
     for(int x = 0; x < S->nX; x++) {
         for(int y = 0; y < S->nY; y++) {
@@ -27,6 +29,8 @@ static void compute_density_momentum_moment(struct LBMarrays* S) {
     }
 }
 
+// Flops: 26
+// Intops: 10
 static double calculate_feq( int feqIndex,
                       struct LBMarrays* S,
                       int i
@@ -45,7 +49,8 @@ static double calculate_feq( int feqIndex,
     return weight * S->density_field[feqIndex] * (1.0 + dot_product / (S->c_s * S->c_s) + dot_product * dot_product / (2 * S->c_s * S->c_s * S->c_s * S->c_s) - norm_square / (2 * S->c_s * S->c_s));
 }
 
-
+// Flops: 27
+// Intops: 5
 static double calculate_feq_u(int index, double u_le_x, struct LBMarrays* S, int directionX, int directionY, int directionZ, double weight) {
     double velocityX = S->velocity_field[3 * index] + u_le_x;
     double velocityY = S->velocity_field[3 * index + 1];
@@ -56,6 +61,8 @@ static double calculate_feq_u(int index, double u_le_x, struct LBMarrays* S, int
     return weight * S->density_field[index] * (1.0 + dot_product / (S->c_s * S->c_s) + dot_product * dot_product / (2 * S->c_s * S->c_s * S->c_s * S->c_s) - norm_square / (2 * S->c_s * S->c_s));
 }
 
+// Flops: nX * nY * nZ * q * 29 + 2
+// Intops: xN * nY * nZ * q * 23
 static void collision(struct LBMarrays* S) {
     const double tauinv = 1.0 / S->tau;
     const double omtauinv = 1.0 - tauinv;
@@ -76,6 +83,8 @@ static void collision(struct LBMarrays* S) {
     }
 }
 
+// Flops: 0
+// Intops: xN * nY * nZ * q * 32
 static void periodic_boundary_condition(struct LBMarrays* S) {
     for(int x = 0; x < S->nX; x++) {
         for (int y = 0; y < S->nY; y++) {
@@ -94,6 +103,8 @@ static void periodic_boundary_condition(struct LBMarrays* S) {
     }
 }
 
+// Flops: 5 * (nX * nZ * q / 3)
+// Intops: nX * nZ * q * (39 * nY + 32 / 3)
 static void couette_boundary_condition(struct LBMarrays* S) {
     double c_s_square = S->c_s * S->c_s;
     for(int x = 0; x < S->nX; x++) {
@@ -129,6 +140,8 @@ static void couette_boundary_condition(struct LBMarrays* S) {
     }
 }
 
+// Flops: 4 + (nX * nZ * q / 3) * 233
+// Intops: 1 + nX * nZ * q * (32 * nY + 106 / 3)
 static void lees_edwards_boundary_condition(struct LBMarrays* S, int time) {
     double d_x = S->gamma_dot * (double)S->nY * (double)time;
     int d_x_I = d_x;
@@ -209,10 +222,12 @@ static void stream(struct LBMarrays* S, int time) {
 }
 
 void perform_timestep_struct(struct LBMarrays* S, int time) {
-    //fprintf(stderr,"collision \n");
+    // Flops: nX * nY * nZ * q * 29 + 2
+    // Intops: nX * nY * nZ * q * 23
     collision(S);
-    //fprintf(stderr,"stream \n");
+    // Depends on chosen boundary condition :)
     stream(S, time);
-    //fprintf(stderr,"compute_density_momentum_moment \n");
-    compute_density_momentum_moment(S); //problem
+    // Flops: nX * nY * nZ * (3 + 4 * q)
+    // Intops: nX * nY * nZ * (10 + 14 * q)
+    compute_density_momentum_moment(S);
 }

@@ -1,5 +1,7 @@
 #include "LBMFunctions.h"
 
+// Flops: nX * nY * nZ * (3 + 4 * q)
+// Intops: nX * nY * nZ * (10 + 14 * q)
 static void compute_density_momentum_moment(int nX, int nY, int nZ, int direction_size, double* density_field, double* velocity_field, double* particle_distributions, const int* directions) {
     for(int x = 0; x < nX; x++) {
         for(int y = 0; y < nY; y++) {
@@ -25,6 +27,8 @@ static void compute_density_momentum_moment(int nX, int nY, int nZ, int directio
     }
 }
 
+// Flops: 26
+// Intops: 10
 static double calculate_feq(int index,
                      const double c_s,
                      double* density_field,
@@ -44,6 +48,8 @@ static double calculate_feq(int index,
     return weight * density_field[index] * (1.0 + dot_product / (c_s * c_s) + dot_product * dot_product / (2 * c_s * c_s * c_s * c_s) - norm_square / (2 * c_s * c_s));
 }
 
+// Flops: 27
+// Intops: 5
 static double calculate_feq_u(int index,
                        double u_le_x,
                        const double c_s,
@@ -65,6 +71,8 @@ static double calculate_feq_u(int index,
     return weight * density_field[index] * (1.0 + dot_product / (c_s * c_s) + dot_product * dot_product / (2 * c_s * c_s * c_s * c_s) - norm_square / (2 * c_s * c_s));
 }
 
+// Flops: nX * nY * nZ * q * 29 + 2
+// Intops: xN * nY * nZ * q * 23
 static void collision(int nX, int nY, int nZ, int direction_size, double tau, double c_s,
                double* density_field,
                double* velocity_field,
@@ -93,6 +101,8 @@ static void collision(int nX, int nY, int nZ, int direction_size, double tau, do
     }
 }
 
+// Flops: 0
+// Intops: xN * nY * nZ * q * 32
 static void periodic_boundary_condition(int nX, int nY, int nZ, int direction_size,
                                double* previous_particle_distributions,
                                double* particle_distributions,
@@ -115,6 +125,8 @@ static void periodic_boundary_condition(int nX, int nY, int nZ, int direction_si
     }
 }
 
+// Flops: 5 * (nX * nZ * q / 3)
+// Intops: nX * nZ * q * (39 * nY + 32 / 3)
 static void couette_boundary_condition(int nX, int nY, int nZ, int direction_size, double c_s,
                               double* previous_particle_distributions,
                               double* particle_distributions,
@@ -160,6 +172,8 @@ static void couette_boundary_condition(int nX, int nY, int nZ, int direction_siz
     }
 }
 
+// Flops: 4 + (nX * nZ * q / 3) * 233
+// Intops: 1 + nX * nZ * q * (32 * nY + 106 / 3)
 static void lees_edwards_boundary_condition(int nX, int nY, int nZ, int direction_size, int time, double gamma_dot, double c_s,
                                      double* density_field,
                                      double* velocity_field,
@@ -263,12 +277,14 @@ void perform_timestep_array(int nX, int nY, int nZ, int direction_size, int time
                       const double* weights,
                       int* reverse_indexes
 ) {
-    //fprintf(stderr,"collision \n");
+    // Flops: nX * nY * nZ * q * 29 + 2
+    // Intops: nX * nY * nZ * q * 23
     collision(nX, nY, nZ, direction_size, tau, c_s, density_field, velocity_field, previous_particle_distributions, particle_distributions, directions, weights);
 
-    //fprintf(stderr,"stream \n");
+    // Depends on chosen boundary condition :)
     stream(nX, nY, nZ, direction_size, time, gamma_dot, c_s, boundary_condition, density_field, velocity_field, previous_particle_distributions, particle_distributions, directions, weights, reverse_indexes);
 
-    //fprintf(stderr,"compute_density_momentum_moment \n");
+    // Flops: nX * nY * nZ * (3 + 4 * q)
+    // Intops: nX * nY * nZ * (10 + 14 * q)
     compute_density_momentum_moment(nX, nY, nZ, direction_size, density_field, velocity_field, particle_distributions, directions);
 }
