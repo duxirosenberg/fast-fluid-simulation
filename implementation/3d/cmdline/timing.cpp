@@ -3,27 +3,36 @@
 #include <string>
 #include "tsc_x86.h"
 #include "utils.h"
+#include <fstream>
+#include <streambuf>
 
 using namespace std;
 
 #define CYCLES_REQUIRED 1e9
 #define REP 10
 #define TIME_STEPS 20
-#define N_X 10
-#define N_Y 15
-#define N_Z 20
 #define C_S 0.6
 #define TAU 0.75
 #define GAMMA_DOT 0.01
-#define TIME_STEPS 20
 #define EPS 1e-3
+
+#define BOUNDARY_CONDITION 3
+#define DIRECTION_SIZE 9
+#define N_X 32
+#define N_Y N_X
+#define N_Z N_X
+// One of 9, 15, 27
+// 1=periodic, 2=couette, 3=lees_edwards
+
+
+
 
 // Global vars, used to keep track of LBM simulation functions
 vector<comp_func_struct> lbmFuncsStruct;
 vector<comp_func_arrays> lbmFuncsArrays;
 vector<string> funcNamesArrays;
 vector<string> funcNamesStruct;
-vector<int> funcFlopsStruct;
+vector<int> funcflopsN;
 vector<int> funcFlopsArrays;
 
 // Function to add LBM simulation functions to the list
@@ -36,7 +45,7 @@ void add_array_func(comp_func_arrays f, const char* name, int flops) {
 void add_struct_func(comp_func_struct f, const char* name, int flops) {
     lbmFuncsStruct.push_back(f);
     funcNamesStruct.emplace_back(name);
-    funcFlopsStruct.push_back(flops);
+    funcflopsN.push_back(flops);
 }
 
 struct LBMarrays* init_struct(int direction_size, int boundary_condition) {
@@ -87,7 +96,7 @@ myInt64 time_func_struct(comp_func_struct f, long num_runs) {
     myInt64 start;
     myInt64 total = 0;
     for(int i = 0; i < num_runs; i++) {
-        LBMarrays* solver = init_struct(27, 3);
+        LBMarrays* solver = init_struct(DIRECTION_SIZE,BOUNDARY_CONDITION);
         start = start_tsc();
         for(int j = 0; j < TIME_STEPS; j++) {
             f(solver, j);
@@ -103,7 +112,7 @@ myInt64 time_func_array(comp_func_arrays f, long num_runs) {
     myInt64 start;
     myInt64 total = 0;
     for(int i = 0; i < num_runs; i++) {
-        LBMarrays *solver = init_struct(27, 3);
+        LBMarrays *solver = init_struct(DIRECTION_SIZE,BOUNDARY_CONDITION);
         start = start_tsc();
         for (int j = 0; j < TIME_STEPS; j++) {
             f(
@@ -232,7 +241,7 @@ int main(int argc, char **argv) {
     cout << "[2/3] Testing correctness:" << endl;
 
     // initialize
-    struct LBMarrays* baseline_solver = init_struct(27, 3);
+    struct LBMarrays* baseline_solver = init_struct(DIRECTION_SIZE,BOUNDARY_CONDITION);
     // Run the baseline to compare the other functions to
     cout << "       Testing [1/" << numFuncs << "]: Currently Calculating Baseline " << endl;
     for(int i = 0; i < TIME_STEPS; i++) {
@@ -243,7 +252,7 @@ int main(int argc, char **argv) {
     for (int i = 0; i < lbmFuncsStruct.size(); i++) {
         // Run the function to be tested
         cout << "       Testing [" << i + 2 << "/" << numFuncs << "]: Function \"" << funcNamesStruct[i] << "\"" << endl;
-        struct LBMarrays* solver = init_struct(27, 3);
+        struct LBMarrays* solver = init_struct(DIRECTION_SIZE,BOUNDARY_CONDITION);
         for(int j = 0; j < TIME_STEPS; j++) {
             lbmFuncsStruct[i](solver, j);
         }
@@ -254,7 +263,7 @@ int main(int argc, char **argv) {
     for (int i = 0; i < lbmFuncsArrays.size(); i++) {
         // Run the function to be tested
         cout << "       Testing [" << lbmFuncsArrays.size() + i + 2 << "/" << numFuncs << "]: Function \"" << funcNamesArrays[i] << "\"" << endl;
-        struct LBMarrays* solver = init_struct(27, 3);
+        struct LBMarrays* solver =  init_struct(DIRECTION_SIZE,BOUNDARY_CONDITION);
         for(int j = 0; j < TIME_STEPS; j++) {
             lbmFuncsArrays[i](
                     solver->nX, solver->nY, solver->nZ, solver->direction_size, j, solver->tau, solver->gamma_dot, solver->c_s, solver->boundary_condition,
@@ -282,17 +291,66 @@ int main(int argc, char **argv) {
     /*-------------------------------------Timing the Functions-------------------------------------------*/
     cout << "[3/3] Timing the functions." << endl;
     double cycles = time_function_struct(&perform_timestep_baseline, 10);
+    double cyclesArray;
+    double cyclesStruct;
     cout << "       Timing [1/" << numFuncs << "]: Baseline on average takes " << cycles << " cycles for " << TIME_STEPS << " timestep." << endl;
     for (int i = 0; i < lbmFuncsStruct.size(); i++) {
-        cycles = time_function_struct(lbmFuncsStruct[i], funcFlopsStruct[i]);
+        cycles = time_function_struct(lbmFuncsStruct[i], funcflopsN[i]);
+        cyclesStruct = cycles;
         cout << "       Timing [" << i+2 << "/" << numFuncs << "]: Function \"" << funcNamesStruct[i] << "\" on average takes " << cycles << " cycles for " << TIME_STEPS << " timestep." << endl;
     }
     for (int i = 0; i < lbmFuncsArrays.size(); i++) {
         cycles = time_function_array(lbmFuncsArrays[i], funcFlopsArrays[i]);
+        cyclesArray = cycles;
         cout << "       Timing [" << lbmFuncsStruct.size() + i + 2 << "/" << numFuncs << "]: Function \"" << funcNamesArrays[i] << "\" on average takes " << cycles << " cycles for " << TIME_STEPS << " timestep." << endl;
     }
     cout << "       Timing DONE." << endl;
     cout << "Program finished." << endl << endl;
+
+
+
+
+
+    // // 1=periodic, 2=couette, 3=lees_edwards
+    // // 9, 15, 27
+
+    // double NNN = N_X*N_Y*N_Z;
+    // double flopsN, iopsN;
+
+    // flopsN = NNN*DIRECTION_SIZE*29+2 + NNN*(3+4+DIRECTION_SIZE);
+    // iopsN = NNN*DIRECTION_SIZE*23 + NNN*(10+14+DIRECTION_SIZE);
+    // if(BOUNDARY_CONDITION == 1){
+    //     iopsN += NNN*DIRECTION_SIZE*32;
+
+    // }
+    // else if(BOUNDARY_CONDITION == 2){
+    //     flopsN += 5*N_X*N_Z*DIRECTION_SIZE / 3;
+    //     iopsN += N_X*N_Z*DIRECTION_SIZE*(39*N_Y+32/3);
+    // }
+    // else if(BOUNDARY_CONDITION == 3){
+    //     flopsN += 4 + (N_X * N_Z * DIRECTION_SIZE / 3) * 233;
+    //     iopsN +=  1 + N_X * N_Z * DIRECTION_SIZE * (32 * N_Y + 106 / 3);
+    // }
+
+    // std::string filename = "TimingData.csv";
+    // std::ofstream fos;
+    //         // // // fos.open(filename, std::ofstream::out);
+    //         // // // fos << "iops,flops,cyclesArray,cyclesStruct,BOUNDARY_CONDITION,DIRECTION_SIZE,NX,NY,NZ,TIMESTEPS," << std::endl;
+    // fos.open(filename, std::ofstream::out | std::ofstream::app);
+    // fos <<  TIME_STEPS*iopsN   <<  "," << 
+    //         TIME_STEPS*flopsN  <<  "," << 
+    //         cyclesArray             <<  "," << 
+    //         cyclesStruct            <<  "," << 
+    //         BOUNDARY_CONDITION      <<  "," << 
+    //         DIRECTION_SIZE          <<  "," << 
+    //         N_X                     <<  "," << 
+    //         N_Y                     <<  "," << 
+    //         N_Z                     <<  "," << 
+    //         TIME_STEPS              <<  "," <<   
+    //         std::endl;
+
+    // fos.close();
+
 
     return 0;
 }
