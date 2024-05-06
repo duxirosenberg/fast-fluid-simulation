@@ -34,7 +34,7 @@ In the LBMFunctions.h header, add your function to the header and register your 
 
 - A C compiler (like `gcc` or `clang`)
 - CMake (minimum version 3.10)
-- Python (if running the Python baseline for comparison)
+
 
 ### Building the Project
 
