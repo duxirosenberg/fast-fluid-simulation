@@ -10,10 +10,6 @@
 #include "csv.h"
 #include "utils.h"
 
-extern "C" {
-    #include "LBM.h"
-}
-
 using namespace rapidjson;
 
 inline bool file_exists (const std::string& name) {

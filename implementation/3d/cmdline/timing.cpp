@@ -1,12 +1,12 @@
 #include <iostream>
 #include <vector>
-#include <string>
+#include <functional>
 #include "tsc_x86.h"
 #include "utils.h"
 
 using namespace std;
 
-#define CYCLES_REQUIRED 1e9
+#define CYCLES_REQUIRED 2e9
 #define REP 10
 #define TIME_STEPS 20
 #define N_X 10
@@ -16,27 +16,90 @@ using namespace std;
 #define TAU 0.75
 #define GAMMA_DOT 0.01
 #define TIME_STEPS 20
-#define EPS 1e-3
 
-// Global vars, used to keep track of LBM simulation functions
-vector<comp_func_struct> lbmFuncsStruct;
-vector<comp_func_arrays> lbmFuncsArrays;
-vector<string> funcNamesArrays;
-vector<string> funcNamesStruct;
-vector<int> funcFlopsStruct;
-vector<int> funcFlopsArrays;
+template <typename T>
+class FuncEntry {
+public:
+    T func;
+    std::function<void(T, LBMarrays*)> run_func;
+    std::function<myInt64(T, int)> time_func;
+    const char* funcName;
+    int funcFlops;
+    FuncEntry(T p1, std::function<void(T, LBMarrays*)> p2, std::function<myInt64(T, int)> p3, const char* p4, int p5) {
+        func = p1;
+        run_func = p2;
+        time_func = p3;
+        funcName = p4;
+        funcFlops = p5;
+    }
+};
 
-// Function to add LBM simulation functions to the list
-void add_array_func(comp_func_arrays f, const char* name, int flops) {
-    lbmFuncsArrays.push_back(f);
-    funcNamesArrays.emplace_back(name);
-    funcFlopsArrays.push_back(flops);
+template <typename T>
+double time_function(FuncEntry<T> f) {
+    long num_runs = 10;
+    double multiplier = 1;
+    myInt64 time;
+    // Warm-up phase: we determine a number of executions that allows
+    // the code to be executed for at least CYCLES_REQUIRED cycles.
+    // This helps excluding timing overhead when measuring small runtimes.
+    do{
+        num_runs = (long) ((double) num_runs * multiplier);
+        // perform Nt steps of Simulation on initial conditions F_init, store the result in F
+        auto cycles = (double) f.time_func(f.func, num_runs);
+        multiplier = (CYCLES_REQUIRED) / cycles;
+    } while (multiplier > 2);
+    // Perform REP runs and store the results in a list
+    double total_cycles = 0;
+    for (size_t j = 0; j < REP; j++) {
+        time = f.time_func(f.func, num_runs);
+        double cycles = ((double)time) / (double) num_runs;
+        total_cycles += cycles;
+    }
+    total_cycles /= REP;
+    return total_cycles; // Returns the average cycles over the repetitions
 }
 
-void add_struct_func(comp_func_struct f, const char* name, int flops) {
-    lbmFuncsStruct.push_back(f);
-    funcNamesStruct.emplace_back(name);
-    funcFlopsStruct.push_back(flops);
+int check_equality(LBMarrays* solver1, LBMarrays* solver2) {
+    int nX = solver1->nX;
+    int nY = solver1->nX;
+    int nZ = solver1->nZ;
+    int direction_size = solver1->direction_size;
+
+    if(nX != solver2->nX || nY != solver2->nX || nZ != solver2->nZ || direction_size != solver2->direction_size) {
+        cout << " dimensions of solvers do not match:" << endl;
+        cout << "           expected x:" << nX << ", y: " << nY << ", z: " << nZ << ", directions " << direction_size << endl;
+        cout << "           got      x:" << solver2->nX << ", y: " << solver2->nY << ", z: " << solver2->nZ << ", directions " << solver2->direction_size;
+        return 0;
+    }
+
+    int eqPD = equal(solver1->particle_distributions, solver2->particle_distributions, nX * nY * nZ * direction_size);
+    int eqPPD = equal(solver1->previous_particle_distributions, solver2->previous_particle_distributions, nX * nY * nZ * direction_size);
+    int eqDF = equal(solver1->density_field, solver2->density_field, nX * nY * nZ);
+    int eqVF = equal(solver1->velocity_field, solver2->velocity_field, nX * nY * nZ);
+
+    if(!eqPD || !eqPPD || !eqDF || !eqVF) {
+        if (eqPD) {
+            cout << "           particle_distributions: CORRECT" << endl;
+        } else {
+            cout << "           particle_distributions: INCORRECT" << endl;
+        }
+        if (eqPPD) {
+            cout << "           previous_particle_distributions: CORRECT" << endl;
+        } else {
+            cout << "           previous_particle_distributions: INCORRECT" << endl;
+        }
+        if (eqDF) {
+            cout << "           density_field: CORRECT" << endl;
+        } else {
+            cout << "           density_field: INCORRECT" << endl;
+        }
+        if (eqVF) {
+            cout << "           velocity_field: CORRECT" << endl;
+        } else {
+            cout << "           velocity_field: INCORRECT" << endl;
+        }
+    }
+    return eqPD + eqPPD + eqDF + eqVF;
 }
 
 struct LBMarrays* init_struct(int direction_size, int boundary_condition) {
@@ -83,215 +146,334 @@ void free_struct(LBMarrays* solver) {
     free(solver);
 }
 
+void run_func_struct(comp_func_struct f, LBMarrays* solver) {
+    for(int j = 0; j < TIME_STEPS; j++) {
+        f(solver);
+    }
+}
+
 myInt64 time_func_struct(comp_func_struct f, long num_runs) {
     myInt64 start;
     myInt64 total = 0;
     for(int i = 0; i < num_runs; i++) {
         LBMarrays* solver = init_struct(27, 3);
         start = start_tsc();
-        for(int j = 0; j < TIME_STEPS; j++) {
-            f(solver, j);
-        }
+        run_func_struct(f, solver);
         total += stop_tsc(start);
         free_struct(solver);
     }
     return total;
 }
 
+void run_func_struct_time(comp_func_struct_time f, LBMarrays* solver) {
+    for(int j = 0; j < TIME_STEPS; j++) {
+        f(solver, j);
+    }
+}
 
-myInt64 time_func_array(comp_func_arrays f, long num_runs) {
+myInt64 time_func_struct_time(comp_func_struct_time f, long num_runs) {
+    myInt64 start;
+    myInt64 total = 0;
+    for(int i = 0; i < num_runs; i++) {
+        LBMarrays* solver = init_struct(27, 3);
+        start = start_tsc();
+        run_func_struct_time(f, solver);
+        total += stop_tsc(start);
+        free_struct(solver);
+    }
+    return total;
+}
+
+void run_collision_func_array(comp_collision_arrays f, LBMarrays* solver) {
+    for (int j = 0; j < TIME_STEPS; j++) {
+        f(
+                solver->nX, solver->nY, solver->nZ, solver->direction_size, solver->tau, solver->c_s,
+                solver->density_field,
+                solver->velocity_field,
+                solver->previous_particle_distributions,
+                solver->particle_distributions,
+                solver->directions,
+                solver->weights
+        );
+    }
+}
+
+myInt64 time_collision_func_array(comp_collision_arrays f, long num_runs) {
     myInt64 start;
     myInt64 total = 0;
     for(int i = 0; i < num_runs; i++) {
         LBMarrays *solver = init_struct(27, 3);
         start = start_tsc();
-        for (int j = 0; j < TIME_STEPS; j++) {
-            f(
-                    solver->nX, solver->nY, solver->nZ, solver->direction_size, j, solver->tau, solver->gamma_dot,
-                    solver->c_s, solver->boundary_condition,
-                    solver->density_field,
-                    solver->velocity_field,
-                    solver->previous_particle_distributions,
-                    solver->particle_distributions,
-                    solver->directions,
-                    solver->weights,
-                    solver->reverse_indexes
-            );
-        }
+        run_collision_func_array(f, solver);
         total += stop_tsc(start);
         free_struct(solver);
     }
     return total;
 }
 
-double time_function_struct(comp_func_struct f, int flops) {
-    long num_runs = 20;
-    double multiplier = 1;
-    myInt64 time;
-    // Build initial conditions for F and cylinder
-    // Warm-up phase: we determine a number of executions that allows
-    // the code to be executed for at least CYCLES_REQUIRED cycles.
-    // This helps excluding timing overhead when measuring small runtimes.
-    do{
-        num_runs = (long) ((double) num_runs * multiplier);
-        // perform Nt steps of Simulation on initial conditions F_init, store the result in F
-        auto cycles = (double) time_func_struct(f, num_runs);
-        multiplier = (CYCLES_REQUIRED) / cycles;
-    } while (multiplier > 2);
-    // Perform REP runs and store the results in a list
-    double total_cycles = 0;
-    for (size_t j = 0; j < REP; j++) {
-        time = time_func_struct(f, num_runs);
-        double cycles = ((double)time) / (double) num_runs;
-        total_cycles += cycles;
+void run_momentum_func_array(comp_momentum_arrays f, LBMarrays* solver) {
+    for (int j = 0; j < TIME_STEPS; j++) {
+        f(
+                solver->nX, solver->nY, solver->nZ, solver->direction_size,
+                solver->density_field,
+                solver->velocity_field,
+                solver->particle_distributions,
+                solver->directions
+        );
     }
-    total_cycles /= REP;
-    return total_cycles; // Returns the average cycles over the repetitions
 }
 
-double time_function_array(comp_func_arrays f, int flops) {
-    long num_runs = 20;
-    double multiplier = 1;
-    myInt64 time;
-    // Build initial conditions for F and cylinder
-    // Warm-up phase: we determine a number of executions that allows
-    // the code to be executed for at least CYCLES_REQUIRED cycles.
-    // This helps excluding timing overhead when measuring small runtimes.
-    do{
-        num_runs = (long) ((double) num_runs * multiplier);
-        // perform Nt steps of Simulation on initial conditions F_init, store the result in F
-        auto cycles = (double) time_func_array(f, num_runs);
-        multiplier = (CYCLES_REQUIRED) / cycles;
-    } while (multiplier > 2);
-    // Perform REP runs and store the results in a list
-    double total_cycles = 0;
-    for (size_t j = 0; j < REP; j++) {
-        time = time_func_array(f, num_runs);
-        double cycles = ((double)time) / (double) num_runs;
-        total_cycles += cycles;
+myInt64 time_momentum_func_array(comp_momentum_arrays f, long num_runs) {
+    myInt64 start;
+    myInt64 total = 0;
+    for(int i = 0; i < num_runs; i++) {
+        LBMarrays *solver = init_struct(27, 3);
+        start = start_tsc();
+        run_momentum_func_array(f, solver);
+        total += stop_tsc(start);
+        free_struct(solver);
     }
-    total_cycles /= REP;
-    return total_cycles; // Returns the average cycles over the repetitions
+    return total;
 }
 
-
-int check_equality(LBMarrays* solver1, LBMarrays* solver2) {
-    int nX = solver1->nX;
-    int nY = solver1->nX;
-    int nZ = solver1->nZ;
-    int direction_size = solver1->direction_size;
-
-    if(nX != solver2->nX || nY != solver2->nX || nZ != solver2->nZ || direction_size != solver2->direction_size) {
-        cout << " dimensions of solvers do not match:" << endl;
-        cout << "           expected x:" << nX << ", y: " << nY << ", z: " << nZ << ", directions " << direction_size << endl;
-        cout << "           got      x:" << solver2->nX << ", y: " << solver2->nY << ", z: " << solver2->nZ << ", directions " << solver2->direction_size;
-        return 0;
+void run_stream_periodic_func_array(comp_stream_periodic_arrays f, LBMarrays* solver) {
+    for (int j = 0; j < TIME_STEPS; j++) {
+        f(
+                solver->nX, solver->nY, solver->nZ, solver->direction_size,
+                solver->previous_particle_distributions,
+                solver->particle_distributions,
+                solver->directions
+        );
     }
-
-    int eqPD = equal(solver1->particle_distributions, solver2->particle_distributions, nX * nY * nZ * direction_size);
-    int eqPPD = equal(solver1->previous_particle_distributions, solver2->previous_particle_distributions, nX * nY * nZ * direction_size);
-    int eqDF = equal(solver1->density_field, solver2->density_field, nX * nY * nZ);
-    int eqVF = equal(solver1->velocity_field, solver2->velocity_field, nX * nY * nZ);
-
-    if (eqPD) {
-        cout << "           particle_distributions: CORRECT" << endl;
-    } else {
-        cout << "           particle_distributions: INCORRECT" << endl;
-    }
-    if (eqPPD) {
-        cout << "           previous_particle_distributions: CORRECT" << endl;
-    } else {
-        cout << "           previous_particle_distributions: INCORRECT" << endl;
-    }
-    if (eqDF) {
-        cout << "           density_field: CORRECT" << endl;
-    } else {
-        cout << "           density_field: INCORRECT" << endl;
-    }
-    if (eqVF) {
-        cout << "           velocity_field: CORRECT" << endl;
-    } else {
-        cout << "           velocity_field: INCORRECT" << endl;
-    }
-    return eqPD + eqPPD + eqDF + eqVF;
 }
 
-int main(int argc, char **argv) {
-    register_functions();
+myInt64 time_stream_periodic_func_array(comp_stream_periodic_arrays f, long num_runs) {
+    myInt64 start;
+    myInt64 total = 0;
+    for(int i = 0; i < num_runs; i++) {
+        LBMarrays *solver = init_struct(27, 3);
+        start = start_tsc();
+        run_stream_periodic_func_array(f, solver);
+        total += stop_tsc(start);
+        free_struct(solver);
+    }
+    return total;
+}
 
-    size_t numFuncs = lbmFuncsStruct.size() + lbmFuncsArrays.size() + 1;
+void run_stream_couette_func_array(comp_stream_couette_arrays f, LBMarrays* solver) {
+    for (int j = 0; j < TIME_STEPS; j++) {
+        f(
+                solver->nX, solver->nY, solver->nZ, solver->direction_size,
+                solver->c_s,
+                solver->previous_particle_distributions,
+                solver->particle_distributions,
+                solver->directions,
+                solver->weights,
+                solver->reverse_indexes
+        );
+    }
+}
+
+myInt64 time_stream_couette_func_array(comp_stream_couette_arrays f, long num_runs) {
+    myInt64 start;
+    myInt64 total = 0;
+    for(int i = 0; i < num_runs; i++) {
+        LBMarrays *solver = init_struct(27, 3);
+        start = start_tsc();
+        run_stream_couette_func_array(f, solver);
+        total += stop_tsc(start);
+        free_struct(solver);
+    }
+    return total;
+}
+
+void run_stream_lees_edwards_func_array(comp_stream_lees_edwards_arrays f, LBMarrays* solver) {
+    for (int j = 0; j < TIME_STEPS; j++) {
+        f(
+                solver->nX, solver->nY, solver->nZ, solver->direction_size, j, solver->gamma_dot,
+                solver->c_s,
+                solver->density_field,
+                solver->velocity_field,
+                solver->previous_particle_distributions,
+                solver->particle_distributions,
+                solver->directions,
+                solver->weights
+        );
+    }
+}
+
+myInt64 time_stream_lees_edwards_func_array(comp_stream_lees_edwards_arrays f, int num_runs) {
+    myInt64 start;
+    myInt64 total = 0;
+    for(int i = 0; i < num_runs; i++) {
+        LBMarrays *solver = init_struct(27, 3);
+        start = start_tsc();
+        run_stream_lees_edwards_func_array(f, solver);
+        total += stop_tsc(start);
+        free_struct(solver);
+    }
+    return total;
+}
+
+void run_func_array(comp_func_arrays f, LBMarrays* solver) {
+    for (int j = 0; j < TIME_STEPS; j++) {
+        f(
+                solver->nX, solver->nY, solver->nZ, solver->direction_size, j, solver->tau, solver->gamma_dot,
+                solver->c_s, solver->boundary_condition,
+                solver->density_field,
+                solver->velocity_field,
+                solver->previous_particle_distributions,
+                solver->particle_distributions,
+                solver->directions,
+                solver->weights,
+                solver->reverse_indexes
+        );
+    }
+}
+
+myInt64 time_func_array(comp_func_arrays f, int num_runs) {
+    myInt64 start;
+    myInt64 total = 0;
+    for(int i = 0; i < num_runs; i++) {
+        LBMarrays *solver = init_struct(27, 3);
+        start = start_tsc();
+        run_func_array(f, solver);
+        total += stop_tsc(start);
+        free_struct(solver);
+    }
+    return total;
+}
+
+template <typename T, typename U>
+void step(int num, int max, const char* name, FuncEntry<T> baseline, vector<FuncEntry<T>> structFuncs, vector<FuncEntry<U>> arrayFuncs) {
+    size_t numFuncs = structFuncs.size() + structFuncs.size();
     if (numFuncs == 0) {
-        cout << "No functions registered - exiting." << endl;
-        return 0;
-    }else{
-        cout << endl << "[1/3] Starting program. " << numFuncs << " function(s) registered." << endl;
-    }
-
-
-    /*-------------------------------------Validating the Functions-------------------------------------------*/
-    cout << "[2/3] Testing correctness:" << endl;
-
-    // initialize
-    struct LBMarrays* baseline_solver = init_struct(27, 3);
-    // Run the baseline to compare the other functions to
-    cout << "       Testing [1/" << numFuncs << "]: Currently Calculating Baseline " << endl;
-    for(int i = 0; i < TIME_STEPS; i++) {
-        perform_timestep_baseline(baseline_solver, i);
-    }
-
-    int eq = 0;
-    for (int i = 0; i < lbmFuncsStruct.size(); i++) {
-        // Run the function to be tested
-        cout << "       Testing [" << i + 2 << "/" << numFuncs << "]: Function \"" << funcNamesStruct[i] << "\"" << endl;
-        struct LBMarrays* solver = init_struct(27, 3);
-        for(int j = 0; j < TIME_STEPS; j++) {
-            lbmFuncsStruct[i](solver, j);
+        cout << endl << "[" << num << "/" << max << "] " << name << ": No functions registered, skipping..." << endl;
+    } else {
+        cout << endl << "[" << num << "/" << max << "] " << name << ": " << numFuncs << " function(s) registered." << endl;
+        cout << "    [1/2] Testing correctness:" << endl;
+        struct LBMarrays *baseline_solver = init_struct(27, 3);
+        baseline.run_func(baseline.func, baseline_solver);
+        int eq = 0;
+        for (int i = 0; i < structFuncs.size(); i++) {
+            // Run the function to be tested
+            cout << "       Testing [" << i + 1 << "/" << numFuncs << "]: Function \"" << structFuncs[i].funcName
+                 << "\"" << endl;
+            struct LBMarrays *solver = init_struct(27, 3);
+            structFuncs[i].run_func(structFuncs[i].func, solver);
+            eq += check_equality(baseline_solver, solver);
+            free_struct(solver);
         }
-        eq += check_equality(baseline_solver, solver);
-        free_struct(solver);
-    }
-
-    for (int i = 0; i < lbmFuncsArrays.size(); i++) {
-        // Run the function to be tested
-        cout << "       Testing [" << lbmFuncsArrays.size() + i + 2 << "/" << numFuncs << "]: Function \"" << funcNamesArrays[i] << "\"" << endl;
-        struct LBMarrays* solver = init_struct(27, 3);
-        for(int j = 0; j < TIME_STEPS; j++) {
-            lbmFuncsArrays[i](
-                    solver->nX, solver->nY, solver->nZ, solver->direction_size, j, solver->tau, solver->gamma_dot, solver->c_s, solver->boundary_condition,
-                    solver->density_field,
-                    solver->velocity_field,
-                    solver->previous_particle_distributions,
-                    solver->particle_distributions,
-                    solver->directions,
-                    solver->weights,
-                    solver->reverse_indexes
-            );
+        for (int i = 0; i < arrayFuncs.size(); i++) {
+            // Run the function to be tested
+            cout << "       Testing [" << arrayFuncs.size() + i + 1 << "/" << numFuncs << "]: Function \""
+                 << arrayFuncs[i].funcName << "\"" << endl;
+            struct LBMarrays *solver = init_struct(27, 3);
+            arrayFuncs[i].run_func(arrayFuncs[i].func, solver);
+            eq += check_equality(baseline_solver, solver);
+            free_struct(solver);
         }
-        eq += check_equality(baseline_solver, solver);
-        free_struct(solver);
+        free_struct(baseline_solver);
+        if (eq < numFuncs * 4) {
+            cout << eq;
+            cout << "       Testing FAILED: Some simulations compute incorrect results." << endl;
+            return;
+        } else {
+            cout << "    [2/2] Timing:" << endl;
+            double cycles = time_function(baseline);
+            cout << "       Timing [1/" << numFuncs + 1 << "]: Baseline on average takes " << cycles << " cycles for "
+                 << TIME_STEPS << " time step." << endl;
+            for (int i = 0; i < structFuncs.size(); i++) {
+                cycles = time_function(structFuncs[i]);
+                cout << "       Timing [" << i + 2 << "/" << numFuncs + 1 << "]: Function \"" << structFuncs[i].funcName
+                     << "\" on average takes " << cycles << " cycles for " << TIME_STEPS << " time step." << endl;
+            }
+            for (int i = 0; i < arrayFuncs.size(); i++) {
+                cycles = time_function(arrayFuncs[i]);
+                cout << "       Timing [" << structFuncs.size() + i + 2 << "/" << numFuncs + 1 << "]: Function \""
+                     << arrayFuncs[i].funcName << "\" on average takes " << cycles << " cycles for " << TIME_STEPS
+                     << " time step." << endl;
+            }
+        }
+        cout << "       Timing DONE." << endl;
     }
-    free_struct(baseline_solver);
-    if(eq < (numFuncs - 1) * 4) {
-        cout << eq;
-        cout << "       Testing FAILED: Some simulations compute incorrect results." << endl;
-        exit(1);
-    }
-    cout << "       Testing DONE: All simulations compute correct results." << endl;
+}
 
+// Global vars, used to keep track of LBM simulation functions
+vector<FuncEntry<comp_func_struct>> momentumFuncsStruct;
+vector<FuncEntry<comp_func_struct>> collisionFuncsStruct;
+vector<FuncEntry<comp_func_struct_time>> streamPeriodicFuncsStruct;
+vector<FuncEntry<comp_func_struct>> streamCouetteFuncsStruct;
+vector<FuncEntry<comp_func_struct_time>> streamLeesEdwardsFuncsStruct;
+vector<FuncEntry<comp_func_struct_time>> lbmFuncsStruct;
 
-    /*-------------------------------------Timing the Functions-------------------------------------------*/
-    cout << "[3/3] Timing the functions." << endl;
-    double cycles = time_function_struct(&perform_timestep_baseline, 10);
-    cout << "       Timing [1/" << numFuncs << "]: Baseline on average takes " << cycles << " cycles for " << TIME_STEPS << " timestep." << endl;
-    for (int i = 0; i < lbmFuncsStruct.size(); i++) {
-        cycles = time_function_struct(lbmFuncsStruct[i], funcFlopsStruct[i]);
-        cout << "       Timing [" << i+2 << "/" << numFuncs << "]: Function \"" << funcNamesStruct[i] << "\" on average takes " << cycles << " cycles for " << TIME_STEPS << " timestep." << endl;
-    }
-    for (int i = 0; i < lbmFuncsArrays.size(); i++) {
-        cycles = time_function_array(lbmFuncsArrays[i], funcFlopsArrays[i]);
-        cout << "       Timing [" << lbmFuncsStruct.size() + i + 2 << "/" << numFuncs << "]: Function \"" << funcNamesArrays[i] << "\" on average takes " << cycles << " cycles for " << TIME_STEPS << " timestep." << endl;
-    }
-    cout << "       Timing DONE." << endl;
+vector<FuncEntry<comp_momentum_arrays>> momentumFuncsArrays;
+vector<FuncEntry<comp_collision_arrays>> collisionFuncsArrays;
+vector<FuncEntry<comp_stream_periodic_arrays>> streamPeriodicFuncsArrays;
+vector<FuncEntry<comp_stream_couette_arrays>> streamCouetteFuncsArrays;
+vector<FuncEntry<comp_stream_lees_edwards_arrays>> streamLeesEdwardsFuncsArrays;
+vector<FuncEntry<comp_func_arrays>> lbmFuncsArrays;
+
+// Function to add LBM simulation functions to the lists
+void add_momentum_struct_func(comp_func_struct f, const char* name, int flops) {
+    momentumFuncsStruct.emplace_back(f, &run_func_struct, &time_func_struct, name, flops);
+}
+void add_collision_struct_func(comp_func_struct f, const char* name, int flops) {
+    collisionFuncsStruct.emplace_back(f, &run_func_struct, &time_func_struct, name, flops);
+}
+void add_stream_periodic_struct_func(comp_func_struct_time f, const char* name, int flops) {
+    streamPeriodicFuncsStruct.emplace_back(f, &run_func_struct_time, &time_func_struct_time, name, flops);
+}
+void add_stream_couette_struct_func(comp_func_struct f, const char* name, int flops) {
+    streamCouetteFuncsStruct.emplace_back(f, &run_func_struct, &time_func_struct, name, flops);
+}
+void add_stream_lees_edwards_struct_func(comp_func_struct_time f, const char* name, int flops) {
+    streamLeesEdwardsFuncsStruct.emplace_back(f, &run_func_struct_time, &time_func_struct_time, name, flops);
+}
+void add_lbm_struct_func(comp_func_struct_time f, const char* name, int flops) {
+    lbmFuncsStruct.emplace_back(f, &run_func_struct_time, &time_func_struct_time, name, flops);
+}
+
+void add_momentum_array_func(comp_momentum_arrays f, const char* name, int flops) {
+    momentumFuncsArrays.emplace_back(f, &run_momentum_func_array, &time_momentum_func_array, name, flops);
+}
+void add_collision_array_func(comp_collision_arrays f, const char* name, int flops) {
+    collisionFuncsArrays.emplace_back(f, &run_collision_func_array, &time_collision_func_array, name, flops);
+}
+void add_stream_periodic_array_func(comp_stream_periodic_arrays f, const char* name, int flops) {
+    streamPeriodicFuncsArrays.emplace_back(f, &run_stream_periodic_func_array, &time_stream_periodic_func_array, name, flops);
+}
+void add_stream_couette_array_func(comp_stream_couette_arrays f, const char* name, int flops) {
+    streamCouetteFuncsArrays.emplace_back(f, &run_stream_couette_func_array, &time_stream_couette_func_array, name, flops);
+}
+void add_stream_lees_edwards_array_func(comp_stream_lees_edwards_arrays f, const char* name, int flops) {
+    streamLeesEdwardsFuncsArrays.emplace_back(f, &run_stream_lees_edwards_func_array, &time_stream_lees_edwards_func_array, name, flops);
+}
+void add_lbm_array_func(comp_func_arrays f, const char* name, int flops) {
+    lbmFuncsArrays.emplace_back(f, &run_func_array, &time_func_array, name, flops);
+}
+
+int main() {
+    // register_functions();
+    register_momentum_functions();
+    register_collision_functions();
+    register_stream_periodic_functions();
+    register_stream_couette_functions();
+    register_stream_lees_edwards_functions();
+    register_lbm_function();
+
+    auto momentumBaseline = FuncEntry<comp_func_struct>(&momentum_baseline, &run_func_struct, &time_func_struct, "Momentum Baseline", 10);
+    step(1, 6, "Momentum", momentumBaseline, momentumFuncsStruct, momentumFuncsArrays);
+    auto collisionBaseline = FuncEntry<comp_func_struct>(&collision_baseline, &run_func_struct, &time_func_struct, "Collision Baseline", 10);
+    step(2, 6, "Collision", collisionBaseline, collisionFuncsStruct, collisionFuncsArrays);
+    auto streamPeriodicBaseline = FuncEntry<comp_func_struct_time>(&stream_periodic_baseline, &run_func_struct_time, &time_func_struct_time, "Stream Periodic Baseline", 10);
+    step(3, 6, "Stream Periodic", streamPeriodicBaseline, streamPeriodicFuncsStruct, streamPeriodicFuncsArrays);
+    auto streamCouetteBaseline = FuncEntry<comp_func_struct>(&stream_couette_baseline, &run_func_struct, &time_func_struct, "Stream Couette Baseline", 10);
+    step(4, 6, "Stream Couette", streamCouetteBaseline, streamCouetteFuncsStruct, streamCouetteFuncsArrays);
+    auto streamLeesEdwardsBaseline = FuncEntry<comp_func_struct_time>(&stream_lees_edwards_baseline, &run_func_struct_time, &time_func_struct_time, "Stream Lees Edwards Baseline", 10);
+    step(5, 6, "Stream Less Edwards", streamLeesEdwardsBaseline, streamLeesEdwardsFuncsStruct, streamLeesEdwardsFuncsArrays);
+    auto lbmBaseline = FuncEntry<comp_func_struct_time>(&perform_timestep_baseline, &run_func_struct_time, &time_func_struct_time, "Baseline", 10);
+    step(6, 6, "LBM", lbmBaseline, lbmFuncsStruct, lbmFuncsArrays);
     cout << "Program finished." << endl << endl;
 
     return 0;
