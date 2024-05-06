@@ -1,6 +1,8 @@
 #include <iostream>
+#include <utility>
 #include <vector>
 #include <functional>
+#include <fstream>
 #include "tsc_x86.h"
 #include "utils.h"
 
@@ -24,13 +26,13 @@ public:
     std::function<void(T, LBMarrays*)> run_func;
     std::function<myInt64(T, int)> time_func;
     const char* funcName;
-    int funcFlops;
-    FuncEntry(T p1, std::function<void(T, LBMarrays*)> p2, std::function<myInt64(T, int)> p3, const char* p4, int p5) {
+    std::function<struct ops(LBMarrays*)> calc_ops;
+    FuncEntry(T p1, std::function<void(T, LBMarrays*)> p2, std::function<myInt64(T, int)> p3, const char* p4, std::function<struct ops(LBMarrays*)> p5) {
         func = p1;
         run_func = p2;
         time_func = p3;
         funcName = p4;
-        funcFlops = p5;
+        calc_ops = std::move(p5);
     }
 };
 
@@ -345,7 +347,9 @@ myInt64 time_func_array(comp_func_arrays f, int num_runs) {
 }
 
 template <typename T, typename U>
-void step(int num, int max, const char* name, FuncEntry<T> baseline, vector<FuncEntry<T>> structFuncs, vector<FuncEntry<U>> arrayFuncs) {
+void step(int num, int max, std::ofstream& fos, const char* name, FuncEntry<T> baseline, vector<FuncEntry<T>> structFuncs, vector<FuncEntry<U>> arrayFuncs) {
+    struct LBMarrays *example = init_struct(27, 3);
+
     size_t numFuncs = structFuncs.size() + structFuncs.size();
     if (numFuncs == 0) {
         cout << endl << "[" << num << "/" << max << "] " << name << ": No functions registered, skipping..." << endl;
@@ -381,21 +385,56 @@ void step(int num, int max, const char* name, FuncEntry<T> baseline, vector<Func
         } else {
             cout << "    [2/2] Timing:" << endl;
             double cycles = time_function(baseline);
+            struct ops baselineOps = baseline.calc_ops(example);
+            fos << TIME_STEPS * baselineOps.iops   << "," <<
+                   TIME_STEPS * baselineOps.flops  << "," <<
+                   baseline.funcName               << "," <<
+                   cycles                          << "," <<
+                   example->direction_size         << "," <<
+                   N_X                             << "," <<
+                   N_Y                             << "," <<
+                   N_Z                             << "," <<
+                   TIME_STEPS                      << "," <<
+                   std::endl;
             cout << "       Timing [1/" << numFuncs + 1 << "]: Baseline on average takes " << cycles << " cycles for "
                  << TIME_STEPS << " time step." << endl;
             for (int i = 0; i < structFuncs.size(); i++) {
                 cycles = time_function(structFuncs[i]);
                 cout << "       Timing [" << i + 2 << "/" << numFuncs + 1 << "]: Function \"" << structFuncs[i].funcName
                      << "\" on average takes " << cycles << " cycles for " << TIME_STEPS << " time step." << endl;
+                struct ops ops = structFuncs[i].calc_ops(example);
+                fos << TIME_STEPS * ops.iops   << "," <<
+                       TIME_STEPS * ops.flops  << "," <<
+                       structFuncs[i].funcName << "," <<
+                       cycles                  << "," <<
+                       example->direction_size << "," <<
+                       N_X                     << "," <<
+                       N_Y                     << "," <<
+                       N_Z                     << "," <<
+                       TIME_STEPS              << "," <<
+                       std::endl;
             }
             for (int i = 0; i < arrayFuncs.size(); i++) {
                 cycles = time_function(arrayFuncs[i]);
                 cout << "       Timing [" << structFuncs.size() + i + 2 << "/" << numFuncs + 1 << "]: Function \""
                      << arrayFuncs[i].funcName << "\" on average takes " << cycles << " cycles for " << TIME_STEPS
                      << " time step." << endl;
+
+                struct ops ops = arrayFuncs[i].calc_ops(example);
+                fos << TIME_STEPS * ops.iops   << "," <<
+                       TIME_STEPS * ops.flops  << "," <<
+                       arrayFuncs[i].funcName  << "," <<
+                       cycles                  << "," <<
+                       example->direction_size << "," <<
+                       N_X                     << "," <<
+                       N_Y                     << "," <<
+                       N_Z                     << "," <<
+                       TIME_STEPS              << "," <<
+                       std::endl;
             }
         }
         cout << "       Timing DONE." << endl;
+        free_struct(example);
     }
 }
 
@@ -415,42 +454,42 @@ vector<FuncEntry<comp_stream_lees_edwards_arrays>> streamLeesEdwardsFuncsArrays;
 vector<FuncEntry<comp_func_arrays>> lbmFuncsArrays;
 
 // Function to add LBM simulation functions to the lists
-void add_momentum_struct_func(comp_func_struct f, const char* name, int flops) {
-    momentumFuncsStruct.emplace_back(f, &run_func_struct, &time_func_struct, name, flops);
+void add_momentum_struct_func(comp_func_struct f, calc_flops calc_ops, const char* name) {
+    momentumFuncsStruct.emplace_back(f, &run_func_struct, &time_func_struct, name, calc_ops);
 }
-void add_collision_struct_func(comp_func_struct f, const char* name, int flops) {
-    collisionFuncsStruct.emplace_back(f, &run_func_struct, &time_func_struct, name, flops);
+void add_collision_struct_func(comp_func_struct f, calc_flops calc_ops, const char* name) {
+    collisionFuncsStruct.emplace_back(f, &run_func_struct, &time_func_struct, name, calc_ops);
 }
-void add_stream_periodic_struct_func(comp_func_struct_time f, const char* name, int flops) {
-    streamPeriodicFuncsStruct.emplace_back(f, &run_func_struct_time, &time_func_struct_time, name, flops);
+void add_stream_periodic_struct_func(comp_func_struct_time f, calc_flops calc_ops, const char* name) {
+    streamPeriodicFuncsStruct.emplace_back(f, &run_func_struct_time, &time_func_struct_time, name, calc_ops);
 }
-void add_stream_couette_struct_func(comp_func_struct f, const char* name, int flops) {
-    streamCouetteFuncsStruct.emplace_back(f, &run_func_struct, &time_func_struct, name, flops);
+void add_stream_couette_struct_func(comp_func_struct f, calc_flops calc_ops, const char* name) {
+    streamCouetteFuncsStruct.emplace_back(f, &run_func_struct, &time_func_struct, name, calc_ops);
 }
-void add_stream_lees_edwards_struct_func(comp_func_struct_time f, const char* name, int flops) {
-    streamLeesEdwardsFuncsStruct.emplace_back(f, &run_func_struct_time, &time_func_struct_time, name, flops);
+void add_stream_lees_edwards_struct_func(comp_func_struct_time f, calc_flops calc_ops, const char* name) {
+    streamLeesEdwardsFuncsStruct.emplace_back(f, &run_func_struct_time, &time_func_struct_time, name, calc_ops);
 }
-void add_lbm_struct_func(comp_func_struct_time f, const char* name, int flops) {
-    lbmFuncsStruct.emplace_back(f, &run_func_struct_time, &time_func_struct_time, name, flops);
+void add_lbm_struct_func(comp_func_struct_time f, calc_flops calc_ops, const char* name) {
+    lbmFuncsStruct.emplace_back(f, &run_func_struct_time, &time_func_struct_time, name, calc_ops);
 }
 
-void add_momentum_array_func(comp_momentum_arrays f, const char* name, int flops) {
-    momentumFuncsArrays.emplace_back(f, &run_momentum_func_array, &time_momentum_func_array, name, flops);
+void add_momentum_array_func(comp_momentum_arrays f, calc_flops calc_ops, const char* name) {
+    momentumFuncsArrays.emplace_back(f, &run_momentum_func_array, &time_momentum_func_array, name, calc_ops);
 }
-void add_collision_array_func(comp_collision_arrays f, const char* name, int flops) {
-    collisionFuncsArrays.emplace_back(f, &run_collision_func_array, &time_collision_func_array, name, flops);
+void add_collision_array_func(comp_collision_arrays f, calc_flops calc_ops, const char* name) {
+    collisionFuncsArrays.emplace_back(f, &run_collision_func_array, &time_collision_func_array, name, calc_ops);
 }
-void add_stream_periodic_array_func(comp_stream_periodic_arrays f, const char* name, int flops) {
-    streamPeriodicFuncsArrays.emplace_back(f, &run_stream_periodic_func_array, &time_stream_periodic_func_array, name, flops);
+void add_stream_periodic_array_func(comp_stream_periodic_arrays f, calc_flops calc_ops, const char* name) {
+    streamPeriodicFuncsArrays.emplace_back(f, &run_stream_periodic_func_array, &time_stream_periodic_func_array, name, calc_ops);
 }
-void add_stream_couette_array_func(comp_stream_couette_arrays f, const char* name, int flops) {
-    streamCouetteFuncsArrays.emplace_back(f, &run_stream_couette_func_array, &time_stream_couette_func_array, name, flops);
+void add_stream_couette_array_func(comp_stream_couette_arrays f, calc_flops calc_ops, const char* name) {
+    streamCouetteFuncsArrays.emplace_back(f, &run_stream_couette_func_array, &time_stream_couette_func_array, name, calc_ops);
 }
-void add_stream_lees_edwards_array_func(comp_stream_lees_edwards_arrays f, const char* name, int flops) {
-    streamLeesEdwardsFuncsArrays.emplace_back(f, &run_stream_lees_edwards_func_array, &time_stream_lees_edwards_func_array, name, flops);
+void add_stream_lees_edwards_array_func(comp_stream_lees_edwards_arrays f, calc_flops calc_ops, const char* name) {
+    streamLeesEdwardsFuncsArrays.emplace_back(f, &run_stream_lees_edwards_func_array, &time_stream_lees_edwards_func_array, name, calc_ops);
 }
-void add_lbm_array_func(comp_func_arrays f, const char* name, int flops) {
-    lbmFuncsArrays.emplace_back(f, &run_func_array, &time_func_array, name, flops);
+void add_lbm_array_func(comp_func_arrays f, calc_flops calc_ops, const char* name) {
+    lbmFuncsArrays.emplace_back(f, &run_func_array, &time_func_array, name, calc_ops);
 }
 
 int main() {
@@ -462,19 +501,25 @@ int main() {
     register_stream_lees_edwards_functions();
     register_lbm_function();
 
-    auto momentumBaseline = FuncEntry<comp_func_struct>(&momentum_baseline, &run_func_struct, &time_func_struct, "Momentum Baseline", 10);
-    step(1, 6, "Momentum", momentumBaseline, momentumFuncsStruct, momentumFuncsArrays);
-    auto collisionBaseline = FuncEntry<comp_func_struct>(&collision_baseline, &run_func_struct, &time_func_struct, "Collision Baseline", 10);
-    step(2, 6, "Collision", collisionBaseline, collisionFuncsStruct, collisionFuncsArrays);
-    auto streamPeriodicBaseline = FuncEntry<comp_func_struct_time>(&stream_periodic_baseline, &run_func_struct_time, &time_func_struct_time, "Stream Periodic Baseline", 10);
-    step(3, 6, "Stream Periodic", streamPeriodicBaseline, streamPeriodicFuncsStruct, streamPeriodicFuncsArrays);
-    auto streamCouetteBaseline = FuncEntry<comp_func_struct>(&stream_couette_baseline, &run_func_struct, &time_func_struct, "Stream Couette Baseline", 10);
-    step(4, 6, "Stream Couette", streamCouetteBaseline, streamCouetteFuncsStruct, streamCouetteFuncsArrays);
-    auto streamLeesEdwardsBaseline = FuncEntry<comp_func_struct_time>(&stream_lees_edwards_baseline, &run_func_struct_time, &time_func_struct_time, "Stream Lees Edwards Baseline", 10);
-    step(5, 6, "Stream Less Edwards", streamLeesEdwardsBaseline, streamLeesEdwardsFuncsStruct, streamLeesEdwardsFuncsArrays);
-    auto lbmBaseline = FuncEntry<comp_func_struct_time>(&perform_timestep_baseline, &run_func_struct_time, &time_func_struct_time, "Baseline", 10);
-    step(6, 6, "LBM", lbmBaseline, lbmFuncsStruct, lbmFuncsArrays);
+    std::string filename = "TimingData.csv";
+    std::ofstream fos;
+    fos.open(filename, std::ofstream::out);
+    fos << "iops,flops,function,cycles,DIRECTION_SIZE,NX,NY,NZ,TIMESTEPS" << std::endl;
+
+    auto momentumBaseline = FuncEntry<comp_func_struct>(&momentum_baseline, &run_func_struct, &time_func_struct, "Momentum Baseline", &momentum_baseline_flops);
+    step(1, 6, fos, "Momentum", momentumBaseline, momentumFuncsStruct, momentumFuncsArrays);
+    auto collisionBaseline = FuncEntry<comp_func_struct>(&collision_baseline, &run_func_struct, &time_func_struct, "Collision Baseline", &collision_baseline_flops);
+    step(2, 6, fos, "Collision", collisionBaseline, collisionFuncsStruct, collisionFuncsArrays);
+    auto streamPeriodicBaseline = FuncEntry<comp_func_struct_time>(&stream_periodic_baseline, &run_func_struct_time, &time_func_struct_time, "Stream Periodic Baseline", &stream_periodic_baseline_flops);
+    step(3, 6, fos, "Stream Periodic", streamPeriodicBaseline, streamPeriodicFuncsStruct, streamPeriodicFuncsArrays);
+    auto streamCouetteBaseline = FuncEntry<comp_func_struct>(&stream_couette_baseline, &run_func_struct, &time_func_struct, "Stream Couette Baseline", &stream_couette_baseline_flops);
+    step(4, 6, fos, "Stream Couette", streamCouetteBaseline, streamCouetteFuncsStruct, streamCouetteFuncsArrays);
+    auto streamLeesEdwardsBaseline = FuncEntry<comp_func_struct_time>(&stream_lees_edwards_baseline, &run_func_struct_time, &time_func_struct_time, "Stream Lees Edwards Baseline", &stream_lees_edwards_baseline_flops);
+    step(5, 6, fos, "Stream Less Edwards", streamLeesEdwardsBaseline, streamLeesEdwardsFuncsStruct, streamLeesEdwardsFuncsArrays);
+    auto lbmBaseline = FuncEntry<comp_func_struct_time>(&perform_timestep_baseline, &run_func_struct_time, &time_func_struct_time, "LBM Baseline", &perform_timestep_baseline_flops);
+    step(6, 6, fos, "LBM", lbmBaseline, lbmFuncsStruct, lbmFuncsArrays);
     cout << "Program finished." << endl << endl;
 
+    fos.close();
     return 0;
 }
