@@ -1,12 +1,17 @@
 #ifndef COMMON_H
 #define COMMON_H
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
 
 extern "C" {
     #include "LBM.h"
     #include "LBMFunctions.h"
+    #include "momentum.h"
+    #include "collision.h"
+    #include "couette.h"
+    #include "periodic.h"
+    #include "lees_edwards.h"
     #include "timing.h"
 }
 
