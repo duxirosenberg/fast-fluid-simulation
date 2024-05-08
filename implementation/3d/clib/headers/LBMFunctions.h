@@ -36,7 +36,8 @@ static struct ops perform_timestep_baseline_flops(struct LBMarrays* S) {
 
     struct ops ops = {
             collisionOps.flops + momentumOps.flops + streamOps.flops,
-            collisionOps.iops + momentumOps.iops + streamOps.iops
+            collisionOps.iops + momentumOps.iops + streamOps.iops,
+            collisionOps.bytes + momentumOps.bytes + streamOps.bytes
     };
     return ops;
 }

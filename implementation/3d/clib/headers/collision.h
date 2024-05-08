@@ -5,6 +5,12 @@
 
 // Flops: nX * nY * nZ * q * 29 + 2
 // Intops: xN * nY * nZ * q * 23
+// Doubles: 
+            // prev_particle_dist: nXYZ*q;
+            // velocity_field: nXYZ*3
+            // denssity field nXYZ, 
+            // weights q
+//  Ints:   // dirs: 3xq
 void collision_arrays(int nX, int nY, int nZ, int direction_size, double tau, double c_s,
                       double* density_field,
                       double* velocity_field,
@@ -16,10 +22,13 @@ void collision_arrays(int nX, int nY, int nZ, int direction_size, double tau, do
 void collision_baseline(struct LBMarrays* S);
 
 static struct ops collision_baseline_flops(struct LBMarrays* S) {
-    long val = S->nX * S->nY * S->nZ * S->direction_size;
+    long val0 = S->nX * S->nY * S->nZ;
+    long val = val0 * S->direction_size;
     struct ops ops = {
             2 + val * 29,
-            val * 23
+            val * 23,
+            val0*(S->direction_size+3+1)*(int)(sizeof(double)) + S->direction_size*(int)(3*sizeof(int) +sizeof(double))
+    
     };
     return ops;
 }

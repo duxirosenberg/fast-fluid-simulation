@@ -5,6 +5,9 @@
 
 // Flops: 0
 // Intops: xN * nY * nZ * q * 32
+// Doubles: // particle_dist: nXYZ*q;
+            // pev_particle_dist: nXYZ*q;
+// Ints     // dirs: 3xq
 void stream_periodic_baseline(struct LBMarrays* S, int time);
 
 void stream_periodic_arrays(int nX, int nY, int nZ, int direction_size,
@@ -14,9 +17,12 @@ void stream_periodic_arrays(int nX, int nY, int nZ, int direction_size,
 );
 
 static struct ops stream_periodic_baseline_flops(struct LBMarrays* S) {
+
+    long val = S->nX * S->nY * S->nZ* S->direction_size;
     struct ops ops = {
             0,
-            S->nX * S->nY * S->nZ * S->direction_size * 32
+            val * 32,
+            val*2*(int)(sizeof(double)) + 3*S->direction_size*(int)(sizeof(int))
     };
     return ops;
 }

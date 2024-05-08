@@ -9,15 +9,28 @@
 using namespace std;
 
 #define CYCLES_REQUIRED 2e9
-#define REP 10
-#define TIME_STEPS 20
-#define N_X 10
-#define N_Y 15
-#define N_Z 20
 #define C_S 0.6
 #define TAU 0.75
 #define GAMMA_DOT 0.01
+
+#define REP 10
 #define TIME_STEPS 20
+
+#define N_X 10
+#define N_Y 15
+#define N_Z 20
+#define BOUNDARY_CONDITION_TYPE_DEFAULT 3
+#define DIRECTIONS_TYPE_DEFAULT 27
+
+//initiliaisation of BC is irrelevant for the testing and timing programm
+
+// due to current circumstnces local variables are cumbersome to use ...
+int DIRECTIONS_TYPE_g;
+int NX_g;
+int NY_g;
+int NZ_g;
+int BOUNDARY_CONDITION_g;
+
 
 template <typename T>
 class FuncEntry {
@@ -104,16 +117,19 @@ int check_equality(LBMarrays* solver1, LBMarrays* solver2) {
     return eqPD + eqPPD + eqDF + eqVF;
 }
 
+// currently Testing Behaviour is not influenced by initialized boundary condition
 struct LBMarrays* init_struct(int direction_size, int boundary_condition) {
     auto solver = (LBMarrays*) malloc(sizeof(LBMarrays));
-    solver->nX = N_X;
-    solver->nY = N_Y;
-    solver->nZ = N_Z;
+    solver->nX = NX_g;
+    solver->nY = NX_g;
+    solver->nZ = NX_g;
+
+    solver->boundary_condition = boundary_condition; // 1=periodic, 2=couette, 3=lees_edwards
     solver->direction_size = direction_size; // One of 9, 15, 27
+
     solver->c_s = C_S;
     solver->tau = TAU;
     solver->gamma_dot = GAMMA_DOT;
-    solver->boundary_condition = boundary_condition; // 1=periodic, 2=couette, 3=lees_edwards
 
     int box_flatten_length = solver->nX * solver->nY * solver->nZ;
     int distributions_flatten_length = box_flatten_length * solver->direction_size;
@@ -158,7 +174,7 @@ myInt64 time_func_struct(comp_func_struct f, long num_runs) {
     myInt64 start;
     myInt64 total = 0;
     for(int i = 0; i < num_runs; i++) {
-        LBMarrays* solver = init_struct(27, 3);
+        LBMarrays* solver = init_struct(DIRECTIONS_TYPE_g, BOUNDARY_CONDITION_g);
         start = start_tsc();
         run_func_struct(f, solver);
         total += stop_tsc(start);
@@ -177,7 +193,7 @@ myInt64 time_func_struct_time(comp_func_struct_time f, long num_runs) {
     myInt64 start;
     myInt64 total = 0;
     for(int i = 0; i < num_runs; i++) {
-        LBMarrays* solver = init_struct(27, 3);
+        LBMarrays* solver = init_struct(DIRECTIONS_TYPE_g, BOUNDARY_CONDITION_g);
         start = start_tsc();
         run_func_struct_time(f, solver);
         total += stop_tsc(start);
@@ -204,7 +220,7 @@ myInt64 time_collision_func_array(comp_collision_arrays f, long num_runs) {
     myInt64 start;
     myInt64 total = 0;
     for(int i = 0; i < num_runs; i++) {
-        LBMarrays *solver = init_struct(27, 3);
+        LBMarrays *solver = init_struct(DIRECTIONS_TYPE_g, BOUNDARY_CONDITION_g);
         start = start_tsc();
         run_collision_func_array(f, solver);
         total += stop_tsc(start);
@@ -229,7 +245,7 @@ myInt64 time_momentum_func_array(comp_momentum_arrays f, long num_runs) {
     myInt64 start;
     myInt64 total = 0;
     for(int i = 0; i < num_runs; i++) {
-        LBMarrays *solver = init_struct(27, 3);
+        LBMarrays *solver = init_struct(DIRECTIONS_TYPE_g, BOUNDARY_CONDITION_g);
         start = start_tsc();
         run_momentum_func_array(f, solver);
         total += stop_tsc(start);
@@ -253,7 +269,7 @@ myInt64 time_stream_periodic_func_array(comp_stream_periodic_arrays f, long num_
     myInt64 start;
     myInt64 total = 0;
     for(int i = 0; i < num_runs; i++) {
-        LBMarrays *solver = init_struct(27, 3);
+        LBMarrays *solver = init_struct(DIRECTIONS_TYPE_g, BOUNDARY_CONDITION_g);
         start = start_tsc();
         run_stream_periodic_func_array(f, solver);
         total += stop_tsc(start);
@@ -280,7 +296,7 @@ myInt64 time_stream_couette_func_array(comp_stream_couette_arrays f, long num_ru
     myInt64 start;
     myInt64 total = 0;
     for(int i = 0; i < num_runs; i++) {
-        LBMarrays *solver = init_struct(27, 3);
+        LBMarrays *solver = init_struct(DIRECTIONS_TYPE_g, BOUNDARY_CONDITION_g);
         start = start_tsc();
         run_stream_couette_func_array(f, solver);
         total += stop_tsc(start);
@@ -308,7 +324,7 @@ myInt64 time_stream_lees_edwards_func_array(comp_stream_lees_edwards_arrays f, i
     myInt64 start;
     myInt64 total = 0;
     for(int i = 0; i < num_runs; i++) {
-        LBMarrays *solver = init_struct(27, 3);
+        LBMarrays *solver = init_struct(DIRECTIONS_TYPE_g, BOUNDARY_CONDITION_g);
         start = start_tsc();
         run_stream_lees_edwards_func_array(f, solver);
         total += stop_tsc(start);
@@ -337,7 +353,7 @@ myInt64 time_func_array(comp_func_arrays f, int num_runs) {
     myInt64 start;
     myInt64 total = 0;
     for(int i = 0; i < num_runs; i++) {
-        LBMarrays *solver = init_struct(27, 3);
+        LBMarrays *solver = init_struct(DIRECTIONS_TYPE_g, BOUNDARY_CONDITION_g);
         start = start_tsc();
         run_func_array(f, solver);
         total += stop_tsc(start);
@@ -348,7 +364,7 @@ myInt64 time_func_array(comp_func_arrays f, int num_runs) {
 
 template <typename T, typename U>
 void step(int num, int max, std::ofstream& fos, const char* name, FuncEntry<T> baseline, vector<FuncEntry<T>> structFuncs, vector<FuncEntry<U>> arrayFuncs) {
-    struct LBMarrays *example = init_struct(27, 3);
+    struct LBMarrays *example = init_struct(DIRECTIONS_TYPE_g, BOUNDARY_CONDITION_g);
 
     size_t numFuncs = structFuncs.size() + structFuncs.size();
     if (numFuncs == 0) {
@@ -356,14 +372,14 @@ void step(int num, int max, std::ofstream& fos, const char* name, FuncEntry<T> b
     } else {
         cout << endl << "[" << num << "/" << max << "] " << name << ": " << numFuncs << " function(s) registered." << endl;
         cout << "    [1/2] Testing correctness:" << endl;
-        struct LBMarrays *baseline_solver = init_struct(27, 3);
+        struct LBMarrays *baseline_solver = init_struct(DIRECTIONS_TYPE_g, BOUNDARY_CONDITION_g);
         baseline.run_func(baseline.func, baseline_solver);
         int eq = 0;
         for (int i = 0; i < structFuncs.size(); i++) {
             // Run the function to be tested
             cout << "       Testing [" << i + 1 << "/" << numFuncs << "]: Function \"" << structFuncs[i].funcName
                  << "\"" << endl;
-            struct LBMarrays *solver = init_struct(27, 3);
+            struct LBMarrays *solver = init_struct(DIRECTIONS_TYPE_g, BOUNDARY_CONDITION_g);
             structFuncs[i].run_func(structFuncs[i].func, solver);
             eq += check_equality(baseline_solver, solver);
             free_struct(solver);
@@ -372,7 +388,7 @@ void step(int num, int max, std::ofstream& fos, const char* name, FuncEntry<T> b
             // Run the function to be tested
             cout << "       Testing [" << arrayFuncs.size() + i + 1 << "/" << numFuncs << "]: Function \""
                  << arrayFuncs[i].funcName << "\"" << endl;
-            struct LBMarrays *solver = init_struct(27, 3);
+            struct LBMarrays *solver = init_struct(DIRECTIONS_TYPE_g, BOUNDARY_CONDITION_g);
             arrayFuncs[i].run_func(arrayFuncs[i].func, solver);
             eq += check_equality(baseline_solver, solver);
             free_struct(solver);
@@ -386,14 +402,15 @@ void step(int num, int max, std::ofstream& fos, const char* name, FuncEntry<T> b
             cout << "    [2/2] Timing:" << endl;
             double cycles = time_function(baseline);
             struct ops baselineOps = baseline.calc_ops(example);
-            fos << TIME_STEPS * baselineOps.iops   << "," <<
-                   TIME_STEPS * baselineOps.flops  << "," <<
+            fos << baselineOps.iops   << "," <<
+                   baselineOps.flops  << "," <<
+                   baselineOps.bytes  << "," <<
                    baseline.funcName               << "," <<
                    cycles                          << "," <<
                    example->direction_size         << "," <<
-                   N_X                             << "," <<
-                   N_Y                             << "," <<
-                   N_Z                             << "," <<
+                   NX_g                             << "," <<
+                   NY_g                             << "," <<
+                   NZ_g                             << "," <<
                    TIME_STEPS                      << "," <<
                    std::endl;
             cout << "       Timing [1/" << numFuncs + 1 << "]: Baseline on average takes " << cycles << " cycles for "
@@ -403,14 +420,15 @@ void step(int num, int max, std::ofstream& fos, const char* name, FuncEntry<T> b
                 cout << "       Timing [" << i + 2 << "/" << numFuncs + 1 << "]: Function \"" << structFuncs[i].funcName
                      << "\" on average takes " << cycles << " cycles for " << TIME_STEPS << " time step." << endl;
                 struct ops ops = structFuncs[i].calc_ops(example);
-                fos << TIME_STEPS * ops.iops   << "," <<
-                       TIME_STEPS * ops.flops  << "," <<
+                fos << ops.iops   << "," <<
+                       ops.flops  << "," <<
+                       ops.bytes  << "," <<
                        structFuncs[i].funcName << "," <<
                        cycles                  << "," <<
                        example->direction_size << "," <<
-                       N_X                     << "," <<
-                       N_Y                     << "," <<
-                       N_Z                     << "," <<
+                       NX_g                     << "," <<
+                       NY_g                     << "," <<
+                       NZ_g                     << "," <<
                        TIME_STEPS              << "," <<
                        std::endl;
             }
@@ -421,14 +439,15 @@ void step(int num, int max, std::ofstream& fos, const char* name, FuncEntry<T> b
                      << " time step." << endl;
 
                 struct ops ops = arrayFuncs[i].calc_ops(example);
-                fos << TIME_STEPS * ops.iops   << "," <<
-                       TIME_STEPS * ops.flops  << "," <<
+                fos << ops.iops   << "," <<
+                       ops.flops  << "," <<
+                       ops.bytes  << "," <<
                        arrayFuncs[i].funcName  << "," <<
                        cycles                  << "," <<
                        example->direction_size << "," <<
-                       N_X                     << "," <<
-                       N_Y                     << "," <<
-                       N_Z                     << "," <<
+                       NX_g                    << "," <<
+                       NY_g                    << "," <<
+                       NZ_g                    << "," <<
                        TIME_STEPS              << "," <<
                        std::endl;
             }
@@ -492,7 +511,59 @@ void add_lbm_array_func(comp_func_arrays f, calc_flops calc_ops, const char* nam
     lbmFuncsArrays.emplace_back(f, &run_func_array, &time_func_array, name, calc_ops);
 }
 
-int main() {
+
+
+
+// 9 15 27
+// 1=periodic, 2=couette, 3=lees_edwards
+
+// 
+// init_struct(DIRECTIONS_TYPE_g, BOUNDARY_CONDITION_g)
+
+int main(int argc, char* argv[]) {
+    bool test_collision(true);
+    bool test_momentum(true);
+    bool test_stream(true);
+    // bool test_periodicBC(true);
+    // bool test_couette(true);
+    // bool test_leesedward(true);
+    bool test_LBM(true);
+    bool reset_datafile(false);
+    NZ_g = N_Z;
+    NX_g = N_X;
+    NZ_g = N_Z;
+    DIRECTIONS_TYPE_g = DIRECTIONS_TYPE_DEFAULT;
+    BOUNDARY_CONDITION_g = 3;
+
+    switch(argc-1){
+        // case 5: 
+        //     BOUNDARY_CONDITION_g = std::stoi(argv[3]);
+        case 9: 
+            reset_datafile = (bool)(std::stoi(argv[9]));
+        case 8: 
+            test_LBM = (bool)(std::stoi(argv[8]));
+        case 7: 
+            test_collision = (bool)(std::stoi(argv[7]));
+        case 6: 
+            test_momentum = (bool)(std::stoi(argv[6]));
+        case 5: 
+            test_stream = std::stoi(argv[5]); //0 none; 1 periodic 2 couette 3 lees edwards 4 all
+        case 4: 
+            NZ_g = std::stoi(argv[4]);
+        case 3: 
+            NY_g = std::stoi(argv[3]);
+        case 2: 
+            NX_g = std::stoi(argv[2]);
+        case 1: 
+            DIRECTIONS_TYPE_g = std::stoi(argv[1]);
+        case 0: break;
+        default: std::cout << "too many arguments, default initialisation will be taken" << std::endl;
+    }
+    if(argc-1 == 2){
+        NY_g = NX_g;
+        NZ_g = NY_g;
+    }
+
     // register_functions();
     register_momentum_functions();
     register_collision_functions();
@@ -503,21 +574,33 @@ int main() {
 
     std::string filename = "TimingData.csv";
     std::ofstream fos;
-    fos.open(filename, std::ofstream::out);
-    fos << "iops,flops,function,cycles,DIRECTION_SIZE,NX,NY,NZ,TIMESTEPS" << std::endl;
 
+    if(reset_datafile){
+        fos.open(filename, std::ofstream::out);
+        fos << "iops,flops,bytes,function,cycles,DIRECTION_SIZE,NX,NY,NZ,TIMESTEPS,bytes" << std::endl;
+    }else fos.open(filename, std::ofstream::out | std::ofstream::app);
+
+    if(test_momentum){
     auto momentumBaseline = FuncEntry<comp_func_struct>(&momentum_baseline, &run_func_struct, &time_func_struct, "Momentum Baseline", &momentum_baseline_flops);
     step(1, 6, fos, "Momentum", momentumBaseline, momentumFuncsStruct, momentumFuncsArrays);
+    }if(test_collision){
     auto collisionBaseline = FuncEntry<comp_func_struct>(&collision_baseline, &run_func_struct, &time_func_struct, "Collision Baseline", &collision_baseline_flops);
     step(2, 6, fos, "Collision", collisionBaseline, collisionFuncsStruct, collisionFuncsArrays);
+    }if(test_stream == 1 || test_stream == 4){
     auto streamPeriodicBaseline = FuncEntry<comp_func_struct_time>(&stream_periodic_baseline, &run_func_struct_time, &time_func_struct_time, "Stream Periodic Baseline", &stream_periodic_baseline_flops);
     step(3, 6, fos, "Stream Periodic", streamPeriodicBaseline, streamPeriodicFuncsStruct, streamPeriodicFuncsArrays);
+    }if(test_stream == 2 || test_stream == 4){
     auto streamCouetteBaseline = FuncEntry<comp_func_struct>(&stream_couette_baseline, &run_func_struct, &time_func_struct, "Stream Couette Baseline", &stream_couette_baseline_flops);
     step(4, 6, fos, "Stream Couette", streamCouetteBaseline, streamCouetteFuncsStruct, streamCouetteFuncsArrays);
+    }if(test_stream == 3 || test_stream == 4){
     auto streamLeesEdwardsBaseline = FuncEntry<comp_func_struct_time>(&stream_lees_edwards_baseline, &run_func_struct_time, &time_func_struct_time, "Stream Lees Edwards Baseline", &stream_lees_edwards_baseline_flops);
     step(5, 6, fos, "Stream Less Edwards", streamLeesEdwardsBaseline, streamLeesEdwardsFuncsStruct, streamLeesEdwardsFuncsArrays);
+    }if(test_LBM){
     auto lbmBaseline = FuncEntry<comp_func_struct_time>(&perform_timestep_baseline, &run_func_struct_time, &time_func_struct_time, "LBM Baseline", &perform_timestep_baseline_flops);
     step(6, 6, fos, "LBM", lbmBaseline, lbmFuncsStruct, lbmFuncsArrays);
+    }
+
+
     cout << "Program finished." << endl << endl;
 
     fos.close();
