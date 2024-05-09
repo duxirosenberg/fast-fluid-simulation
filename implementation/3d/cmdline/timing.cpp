@@ -404,7 +404,8 @@ void step(int num, int max, std::ofstream& fos, const char* name, FuncEntry<T> b
             struct ops baselineOps = baseline.calc_ops(example);
             fos << baselineOps.iops   << "," <<
                    baselineOps.flops  << "," <<
-                   baselineOps.bytes  << "," <<
+                   baselineOps.bytes_read  << "," <<
+                   baselineOps.bytes_write  << "," <<
                    baseline.funcName               << "," <<
                    cycles                          << "," <<
                    example->direction_size         << "," <<
@@ -422,7 +423,8 @@ void step(int num, int max, std::ofstream& fos, const char* name, FuncEntry<T> b
                 struct ops ops = structFuncs[i].calc_ops(example);
                 fos << ops.iops   << "," <<
                        ops.flops  << "," <<
-                       ops.bytes  << "," <<
+                       ops.bytes_read  << "," <<
+                       ops.bytes_write  << "," <<
                        structFuncs[i].funcName << "," <<
                        cycles                  << "," <<
                        example->direction_size << "," <<
@@ -441,7 +443,8 @@ void step(int num, int max, std::ofstream& fos, const char* name, FuncEntry<T> b
                 struct ops ops = arrayFuncs[i].calc_ops(example);
                 fos << ops.iops   << "," <<
                        ops.flops  << "," <<
-                       ops.bytes  << "," <<
+                       ops.bytes_read  << "," <<
+                       ops.bytes_write  << "," <<
                        arrayFuncs[i].funcName  << "," <<
                        cycles                  << "," <<
                        example->direction_size << "," <<
@@ -523,7 +526,7 @@ void add_lbm_array_func(comp_func_arrays f, calc_flops calc_ops, const char* nam
 int main(int argc, char* argv[]) {
     bool test_collision(true);
     bool test_momentum(true);
-    bool test_stream(true);
+    int test_stream(4);
     // bool test_periodicBC(true);
     // bool test_couette(true);
     // bool test_leesedward(true);
@@ -577,7 +580,7 @@ int main(int argc, char* argv[]) {
 
     if(reset_datafile){
         fos.open(filename, std::ofstream::out);
-        fos << "iops,flops,bytes,function,cycles,DIRECTION_SIZE,NX,NY,NZ,TIMESTEPS,bytes" << std::endl;
+        fos << "iops,flops,bytes_read,bytes_write,function,cycles,DIRECTION_SIZE,NX,NY,NZ,TIMESTEPS,bytes" << std::endl;
     }else fos.open(filename, std::ofstream::out | std::ofstream::app);
 
     if(test_momentum){

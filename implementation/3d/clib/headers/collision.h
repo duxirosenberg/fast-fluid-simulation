@@ -6,7 +6,7 @@
 // Flops: nX * nY * nZ * q * 29 + 2
 // Intops: xN * nY * nZ * q * 23
 // Doubles: 
-            // prev_particle_dist: nXYZ*q;
+            // prev_particle_dist: nXYZ*q;    write
             // velocity_field: nXYZ*3
             // denssity field nXYZ, 
             // weights q
@@ -27,15 +27,16 @@ static struct ops collision_baseline_flops(struct LBMarrays* S) {
     struct ops ops = {
             2 + val * 29,
             val * 23,
-            val0*(S->direction_size+3+1)*(int)(sizeof(double)) + S->direction_size*(int)(3*sizeof(int) +sizeof(double))
+            val0*(S->direction_size+3+1)*(int)(sizeof(double)) + S->direction_size*(int)(3*sizeof(int) +sizeof(double)),
+            val*(int)(sizeof(double))
     
     };
     return ops;
 }
 
 static void register_collision_functions() {
-    add_collision_array_func(&collision_arrays, &collision_baseline_flops, "Collision Baseline - Arrays");
-    add_collision_struct_func(&collision_baseline, &collision_baseline_flops, "Collision Baseline - Structs");
+    add_collision_array_func(&collision_arrays, &collision_baseline_flops, "Collision - Arrays Bl");
+    add_collision_struct_func(&collision_baseline, &collision_baseline_flops, "Collision - Structs Bl");
 }
 
 #endif //CMDLINE_LBM_COLLISION_H

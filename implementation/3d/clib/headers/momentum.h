@@ -6,8 +6,8 @@
 // Flops: nX * nY * nZ * (3 + 4 * q)
 // Intops: nX * nY * nZ * (10 + 14 * q)
 // Doubles: // particle_dist: nXYZ*q;
-            // velocity_field: nXYZ*3
-            // denssity field nXYZ, 
+            // velocity_field: nXYZ*3  write
+            // denssity field nXYZ,    write  
 // Ints    // dirs: 3xq
 void momentum_baseline(struct LBMarrays* S);
 
@@ -18,14 +18,15 @@ static struct ops momentum_baseline_flops(struct LBMarrays* S) {
     struct ops ops = {
             val * (3 + 4 * S->direction_size),
             val * (10 + 14 * S->direction_size),
-            val*(S->direction_size+3+1)*(int)(sizeof(double)) + S->direction_size*(int)(sizeof(int))
+            val*(S->direction_size+3+1)*(int)(sizeof(double)) + S->direction_size*(int)(sizeof(int)),
+            val*4*(int)(sizeof(double))
     };
     return ops;
 }
 
 static void register_momentum_functions() {
-    add_momentum_array_func(&momentum_arrays, &momentum_baseline_flops, "Momentum Baseline - Arrays");
-    add_momentum_struct_func(&momentum_baseline, &momentum_baseline_flops, "Momentum Baseline - Structs");
+    add_momentum_array_func(&momentum_arrays, &momentum_baseline_flops, "Momentum - Arrays Bl");
+    add_momentum_struct_func(&momentum_baseline, &momentum_baseline_flops, "Momentum - Structs Bl");
 }
 
 #endif //CMDLINE_LBM_MOMENTUM_H

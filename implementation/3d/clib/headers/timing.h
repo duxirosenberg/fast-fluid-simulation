@@ -6,7 +6,8 @@
 struct ops {
     long flops;
     long iops;
-    long bytes;
+    long bytes_read;
+    long bytes_write;
 };
 
 typedef void(*comp_func_struct_time)(struct LBMarrays*, int);
