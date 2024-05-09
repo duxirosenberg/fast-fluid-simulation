@@ -36,8 +36,9 @@ floats_per_vec = 4
 ints_per_vec = 8
 
 
-def get_data(ds, bc, L1, L2, L3):
-    csv_file_path = "TimingData_roofline.csv"
+def get_data(ds, bc, L1, L2, L3, datafile):
+    # csv_file_path = "TimingData_roofline.csv"
+    csv_file_path = datafile
     df = pd.read_csv(csv_file_path)
     df = df.loc[(df["function"]==bc)]
     df = df.loc[(df['DIRECTION_SIZE'] == ds)]
@@ -94,6 +95,7 @@ def roofline(
                 byte_types,
                 savefile,
                 mycols,
+                datafile,
                 zen=False
                 ):
     ax  = plt.gca()
@@ -202,7 +204,7 @@ def roofline(
 
     # +XxoO
     for fname in fnames:
-        fOI,iOI,fOIr,iOIr,fOIw,iOIw,fP,iP, nx, colors = get_data(dType, fname, L1_s, L2_s, L3_s)
+        fOI,iOI,fOIr,iOIr,fOIw,iOIw,fP,iP, nx, colors = get_data(dType, fname, L1_s, L2_s, L3_s, datafile)
 
         if CPLOT("flop", "both"):
             ax.plot(fOI, fP, lw=1, color=mycols[0])
@@ -253,7 +255,7 @@ def roofline(
 
 
 
-def plot_kaby(dType,fnames, op_types, byte_types, mycols, sf):
+def plot_kaby(dType,fnames, op_types, byte_types, mycols, sf, datafile):
         roofline(   
                     peak_performance_flops=2,
                     peak_performance_flops_fma= 4,
@@ -271,13 +273,14 @@ def plot_kaby(dType,fnames, op_types, byte_types, mycols, sf):
                     op_types=op_types,
                     byte_types=byte_types,
                     savefile = sf,
-                    mycols=mycols
+                    mycols=mycols,
+                    datafile=datafile
                 )
 
 
 
 
-def plot_coffee(dType,fnames, op_types, byte_types, mycols, sf):
+def plot_coffee(dType,fnames, op_types, byte_types, mycols, sf, datafile):
 
     roofline(   
                     peak_performance_flops=2,
@@ -296,13 +299,14 @@ def plot_coffee(dType,fnames, op_types, byte_types, mycols, sf):
                     op_types=op_types,
                     byte_types=byte_types,
                     savefile = sf,
-                    mycols=mycols
+                    mycols=mycols,
+                    datafile=datafile
                 )
                 
 
 
 
-def plot_zen3(dType,fnames, op_types, byte_types, mycols, sf):
+def plot_zen3(dType,fnames, op_types, byte_types, mycols, sf,datafile):
     # 51.8gb/s -> 70?? DDR LRDDR??
     # memoryBW1 = 51.8*2**30 #B/s
     # freq = 2.7*10**9 # cycles/s
@@ -327,5 +331,6 @@ def plot_zen3(dType,fnames, op_types, byte_types, mycols, sf):
                     byte_types=byte_types,
                     savefile = sf,
                     mycols=mycols,
+                    datafile=datafile,
                     zen = True
                 )
