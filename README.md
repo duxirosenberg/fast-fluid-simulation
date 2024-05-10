@@ -6,12 +6,9 @@ This project implements the Lattice Boltzmann Method (LBM) for fluid dynamics si
 This project implements a c baseline of the LBM method. The LBM simulation performs 3 consecutive steps on a particle distribution:
 
 
--
+-TODO
 
-The project includes a working baseline which contains the straighforward C baselines one using different arrays and one using a sutrct to store all the data. (The baseline is a c implementation of the C++ baseline we were given).
-
-We have a working infrastructure where we can introduce optimizations to the simulation by adding functions with the same signature as the baseline.
-
+## Infrastructure
 The infrastructure is based on the infrastructure that was used for our ASL Homeworks. 
 
 There are two main executables provided:
