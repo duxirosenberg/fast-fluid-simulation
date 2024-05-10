@@ -36,13 +36,15 @@ static struct ops perform_timestep_baseline_flops(struct LBMarrays* S) {
 
     struct ops ops = {
             collisionOps.flops + momentumOps.flops + streamOps.flops,
-            collisionOps.iops + momentumOps.iops + streamOps.iops
+            collisionOps.iops + momentumOps.iops + streamOps.iops,
+            collisionOps.bytes_read + momentumOps.bytes_read + streamOps.bytes_read,
+            collisionOps.bytes_write + momentumOps.bytes_write + streamOps.bytes_write
     };
     return ops;
 }
 
 static void register_lbm_function() {
-    add_lbm_array_func(&perform_timestep_array, &perform_timestep_baseline_flops, "LBM - Arrays");
-    add_lbm_struct_func(&perform_timestep_baseline, &perform_timestep_baseline_flops, "LBM - Structs");
+    add_lbm_array_func(&perform_timestep_array, &perform_timestep_baseline_flops, "LBM - Arrays Bl");
+    add_lbm_struct_func(&perform_timestep_baseline, &perform_timestep_baseline_flops, "LBM - Structs Bl");
 }
 #endif
