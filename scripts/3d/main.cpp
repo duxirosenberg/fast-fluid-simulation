@@ -18,12 +18,12 @@ inline bool file_exists (const std::string& name) {
 }
 
 int main(int argc, char** argv) {
-  if(!file_exists("options.json")) {
+  if(!file_exists("../options.json")) {
     std::cout << "Please ensure that options.json exists. If not, it can be obtained from root directory of GitHub repo." << '\n';
     return -1;
   }
 
-	std::ifstream t("options.json");
+	std::ifstream t("../options.json");
 	std::string str((std::istreambuf_iterator<char>(t)),std::istreambuf_iterator<char>());
 	rapidjson::Document d;
 	d.Parse(str.c_str());
@@ -53,7 +53,7 @@ int main(int argc, char** argv) {
 	if(choice == 1) {
 		std::string remove_command = "rm -rf ./" + testFolder;
 		std::string mkdir_command = "mkdir ./" + testFolder;
-		std::string copy_command = "cp options.json ./" + testFolder;
+		std::string copy_command = "cp ../options.json ./" + testFolder;
 
 		system( remove_command.c_str());
 		system( mkdir_command.c_str());
