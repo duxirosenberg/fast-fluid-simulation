@@ -124,6 +124,9 @@ struct LBMarrays* init_struct(int direction_size, int boundary_condition) {
     solver->nY = NX_g;
     solver->nZ = NX_g;
 
+    solver->nXY = NX_g*NY_g;
+    solver->nXYZ = NX_g*NY_g*NZ_g;
+
     solver->boundary_condition = boundary_condition; // 1=periodic, 2=couette, 3=lees_edwards
     solver->direction_size = direction_size; // One of 9, 15, 27
 

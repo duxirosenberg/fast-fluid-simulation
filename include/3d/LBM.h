@@ -6,6 +6,8 @@ struct LBMarrays{
     int nX;
     int nY;
     int nZ;
+    int nXY;
+    int nXYZ;
     int direction_size;
     double* density_field;
     double* velocity_field;
