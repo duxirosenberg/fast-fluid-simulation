@@ -523,7 +523,7 @@ void add_lbm_array_func(comp_func_arrays f, calc_flops calc_ops, const char* nam
 // 9 15 27
 // 1=periodic, 2=couette, 3=lees_edwards
 
-// 
+//
 // init_struct(DIRECTIONS_TYPE_g, BOUNDARY_CONDITION_g)
 
 int main(int argc, char* argv[]) {
@@ -542,25 +542,25 @@ int main(int argc, char* argv[]) {
     BOUNDARY_CONDITION_g = 3;
 
     switch(argc-1){
-        // case 5: 
+        // case 5:
         //     BOUNDARY_CONDITION_g = std::stoi(argv[3]);
-        case 9: 
+        case 9:
             reset_datafile = (bool)(std::stoi(argv[9]));
-        case 8: 
+        case 8:
             test_LBM = (bool)(std::stoi(argv[8]));
-        case 7: 
+        case 7:
             test_collision = (bool)(std::stoi(argv[7]));
-        case 6: 
+        case 6:
             test_momentum = (bool)(std::stoi(argv[6]));
-        case 5: 
+        case 5:
             test_stream = std::stoi(argv[5]); //0 none; 1 periodic 2 couette 3 lees edwards 4 all
-        case 4: 
+        case 4:
             NZ_g = std::stoi(argv[4]);
-        case 3: 
+        case 3:
             NY_g = std::stoi(argv[3]);
-        case 2: 
+        case 2:
             NX_g = std::stoi(argv[2]);
-        case 1: 
+        case 1:
             DIRECTIONS_TYPE_g = std::stoi(argv[1]);
         case 0: break;
         default: std::cout << "too many arguments, default initialisation will be taken" << std::endl;

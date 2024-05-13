@@ -1,4 +1,5 @@
-#run script simply 
+
+run script simply
 NX=8
 NY=8
 NZ=8
