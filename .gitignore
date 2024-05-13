@@ -3,6 +3,7 @@
 
 #Build dir
 build/
+cmake-build-debug/
 
 
 # Prerequisites
