@@ -22,9 +22,9 @@ using namespace std;
 #define BOUNDARY_CONDITION_TYPE_DEFAULT 3
 #define DIRECTIONS_TYPE_DEFAULT 27
 
-//initiliaisation of BC is irrelevant for the testing and timing programm
+//initialisation of BC is irrelevant for the testing and timing program
 
-// due to current circumstnces local variables are cumbersome to use ...
+// due to current circumstances local variables are cumbersome to use ...
 int DIRECTIONS_TYPE_g;
 int NX_g;
 int NY_g;
@@ -76,11 +76,11 @@ double time_function(FuncEntry<T> f) {
 
 int check_equality(LBMarrays* solver1, LBMarrays* solver2) {
     int nX = solver1->nX;
-    int nY = solver1->nX;
+    int nY = solver1->nY;
     int nZ = solver1->nZ;
     int direction_size = solver1->direction_size;
 
-    if(nX != solver2->nX || nY != solver2->nX || nZ != solver2->nZ || direction_size != solver2->direction_size) {
+    if(nX != solver2->nX || nY != solver2->nY || nZ != solver2->nZ || direction_size != solver2->direction_size) {
         cout << " dimensions of solvers do not match:" << endl;
         cout << "           expected x:" << nX << ", y: " << nY << ", z: " << nZ << ", directions " << direction_size << endl;
         cout << "           got      x:" << solver2->nX << ", y: " << solver2->nY << ", z: " << solver2->nZ << ", directions " << solver2->direction_size;
@@ -121,11 +121,11 @@ int check_equality(LBMarrays* solver1, LBMarrays* solver2) {
 struct LBMarrays* init_struct(int direction_size, int boundary_condition) {
     auto solver = (LBMarrays*) malloc(sizeof(LBMarrays));
     solver->nX = NX_g;
-    solver->nY = NX_g;
-    solver->nZ = NX_g;
+    solver->nY = NY_g;
+    solver->nZ = NZ_g;
 
-    solver->nXY = NX_g*NY_g;
-    solver->nXYZ = NX_g*NY_g*NZ_g;
+    solver->nXY = NX_g * NY_g;
+    solver->nXYZ = NX_g * NY_g * NZ_g;
 
     solver->boundary_condition = boundary_condition; // 1=periodic, 2=couette, 3=lees_edwards
     solver->direction_size = direction_size; // One of 9, 15, 27
@@ -134,7 +134,7 @@ struct LBMarrays* init_struct(int direction_size, int boundary_condition) {
     solver->tau = TAU;
     solver->gamma_dot = GAMMA_DOT;
 
-    int box_flatten_length = solver->nX * solver->nY * solver->nZ;
+    int box_flatten_length = solver->nXYZ;
     int distributions_flatten_length = box_flatten_length * solver->direction_size;
     if(solver->direction_size == 15) {
         solver->directions = &D3Q15_DIRECTIONS[0];
@@ -369,7 +369,7 @@ template <typename T, typename U>
 void step(int num, int max, std::ofstream& fos, const char* name, FuncEntry<T> baseline, vector<FuncEntry<T>> structFuncs, vector<FuncEntry<U>> arrayFuncs) {
     struct LBMarrays *example = init_struct(DIRECTIONS_TYPE_g, BOUNDARY_CONDITION_g);
 
-    size_t numFuncs = structFuncs.size() + structFuncs.size();
+    size_t numFuncs = structFuncs.size() + arrayFuncs.size();
     if (numFuncs == 0) {
         cout << endl << "[" << num << "/" << max << "] " << name << ": No functions registered, skipping..." << endl;
     } else {
@@ -389,7 +389,7 @@ void step(int num, int max, std::ofstream& fos, const char* name, FuncEntry<T> b
         }
         for (int i = 0; i < arrayFuncs.size(); i++) {
             // Run the function to be tested
-            cout << "       Testing [" << arrayFuncs.size() + i + 1 << "/" << numFuncs << "]: Function \""
+            cout << "       Testing [" << structFuncs.size() + i + 1 << "/" << numFuncs << "]: Function \""
                  << arrayFuncs[i].funcName << "\"" << endl;
             struct LBMarrays *solver = init_struct(DIRECTIONS_TYPE_g, BOUNDARY_CONDITION_g);
             arrayFuncs[i].run_func(arrayFuncs[i].func, solver);
@@ -517,26 +517,14 @@ void add_lbm_array_func(comp_func_arrays f, calc_flops calc_ops, const char* nam
     lbmFuncsArrays.emplace_back(f, &run_func_array, &time_func_array, name, calc_ops);
 }
 
-
-
-
-// 9 15 27
-// 1=periodic, 2=couette, 3=lees_edwards
-
-//
-// init_struct(DIRECTIONS_TYPE_g, BOUNDARY_CONDITION_g)
-
 int main(int argc, char* argv[]) {
     bool test_collision(true);
     bool test_momentum(true);
     int test_stream(4);
-    // bool test_periodicBC(true);
-    // bool test_couette(true);
-    // bool test_leesedward(true);
     bool test_LBM(true);
     bool reset_datafile(false);
-    NZ_g = N_Z;
     NX_g = N_X;
+    NY_g = N_Y;
     NZ_g = N_Z;
     DIRECTIONS_TYPE_g = DIRECTIONS_TYPE_DEFAULT;
     BOUNDARY_CONDITION_g = 3;
@@ -565,10 +553,6 @@ int main(int argc, char* argv[]) {
         case 0: break;
         default: std::cout << "too many arguments, default initialisation will be taken" << std::endl;
     }
-    if(argc-1 == 2){
-        NY_g = NX_g;
-        NZ_g = NY_g;
-    }
 
     // register_functions();
     register_momentum_functions();
@@ -581,31 +565,37 @@ int main(int argc, char* argv[]) {
     std::string filename = "TimingData.csv";
     std::ofstream fos;
 
-    if(reset_datafile){
+    if(reset_datafile) {
         fos.open(filename, std::ofstream::out);
         fos << "iops,flops,bytes_read,bytes_write,function,cycles,DIRECTION_SIZE,NX,NY,NZ,TIMESTEPS,bytes" << std::endl;
-    }else fos.open(filename, std::ofstream::out | std::ofstream::app);
-
-    if(test_momentum){
-    auto momentumBaseline = FuncEntry<comp_func_struct>(&momentum_baseline, &run_func_struct, &time_func_struct, "Momentum Baseline", &momentum_baseline_flops);
-    step(1, 6, fos, "Momentum", momentumBaseline, momentumFuncsStruct, momentumFuncsArrays);
-    }if(test_collision){
-    auto collisionBaseline = FuncEntry<comp_func_struct>(&collision_baseline, &run_func_struct, &time_func_struct, "Collision Baseline", &collision_baseline_flops);
-    step(2, 6, fos, "Collision", collisionBaseline, collisionFuncsStruct, collisionFuncsArrays);
-    }if(test_stream == 1 || test_stream == 4){
-    auto streamPeriodicBaseline = FuncEntry<comp_func_struct_time>(&stream_periodic_baseline, &run_func_struct_time, &time_func_struct_time, "Stream Periodic Baseline", &stream_periodic_baseline_flops);
-    step(3, 6, fos, "Stream Periodic", streamPeriodicBaseline, streamPeriodicFuncsStruct, streamPeriodicFuncsArrays);
-    }if(test_stream == 2 || test_stream == 4){
-    auto streamCouetteBaseline = FuncEntry<comp_func_struct>(&stream_couette_baseline, &run_func_struct, &time_func_struct, "Stream Couette Baseline", &stream_couette_baseline_flops);
-    step(4, 6, fos, "Stream Couette", streamCouetteBaseline, streamCouetteFuncsStruct, streamCouetteFuncsArrays);
-    }if(test_stream == 3 || test_stream == 4){
-    auto streamLeesEdwardsBaseline = FuncEntry<comp_func_struct_time>(&stream_lees_edwards_baseline, &run_func_struct_time, &time_func_struct_time, "Stream Lees Edwards Baseline", &stream_lees_edwards_baseline_flops);
-    step(5, 6, fos, "Stream Less Edwards", streamLeesEdwardsBaseline, streamLeesEdwardsFuncsStruct, streamLeesEdwardsFuncsArrays);
-    }if(test_LBM){
-    auto lbmBaseline = FuncEntry<comp_func_struct_time>(&perform_timestep_baseline, &run_func_struct_time, &time_func_struct_time, "LBM Baseline", &perform_timestep_baseline_flops);
-    step(6, 6, fos, "LBM", lbmBaseline, lbmFuncsStruct, lbmFuncsArrays);
+    } else {
+        fos.open(filename, std::ofstream::out | std::ofstream::app);
     }
 
+    if(test_momentum) {
+        auto momentumBaseline = FuncEntry<comp_func_struct>(&momentum_baseline, &run_func_struct, &time_func_struct, "Momentum Baseline", &momentum_baseline_flops);
+        step(1, 6, fos, "Momentum", momentumBaseline, momentumFuncsStruct, momentumFuncsArrays);
+    }
+    if(test_collision) {
+        auto collisionBaseline = FuncEntry<comp_func_struct>(&collision_baseline, &run_func_struct, &time_func_struct, "Collision Baseline", &collision_baseline_flops);
+        step(2, 6, fos, "Collision", collisionBaseline, collisionFuncsStruct, collisionFuncsArrays);
+    }
+    if(test_stream == 1 || test_stream == 4) {
+        auto streamPeriodicBaseline = FuncEntry<comp_func_struct_time>(&stream_periodic_baseline, &run_func_struct_time, &time_func_struct_time, "Stream Periodic Baseline", &stream_periodic_baseline_flops);
+        step(3, 6, fos, "Stream Periodic", streamPeriodicBaseline, streamPeriodicFuncsStruct, streamPeriodicFuncsArrays);
+    }
+    if(test_stream == 2 || test_stream == 4) {
+        auto streamCouetteBaseline = FuncEntry<comp_func_struct>(&stream_couette_baseline, &run_func_struct, &time_func_struct, "Stream Couette Baseline", &stream_couette_baseline_flops);
+        step(4, 6, fos, "Stream Couette", streamCouetteBaseline, streamCouetteFuncsStruct, streamCouetteFuncsArrays);
+    }
+    if(test_stream == 3 || test_stream == 4) {
+        auto streamLeesEdwardsBaseline = FuncEntry<comp_func_struct_time>(&stream_lees_edwards_baseline, &run_func_struct_time, &time_func_struct_time, "Stream Lees Edwards Baseline", &stream_lees_edwards_baseline_flops);
+        step(5, 6, fos, "Stream Less Edwards", streamLeesEdwardsBaseline, streamLeesEdwardsFuncsStruct, streamLeesEdwardsFuncsArrays);
+    }
+    if(test_LBM){
+        auto lbmBaseline = FuncEntry<comp_func_struct_time>(&perform_timestep_baseline, &run_func_struct_time, &time_func_struct_time, "LBM Baseline", &perform_timestep_baseline_flops);
+        step(6, 6, fos, "LBM", lbmBaseline, lbmFuncsStruct, lbmFuncsArrays);
+    }
 
     cout << "Program finished." << endl << endl;
 
