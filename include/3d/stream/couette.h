@@ -12,7 +12,19 @@
             // rev_indexes: q
 void stream_couette_baseline(struct LBMarrays* S);
 
+void stream_couette_opt1(struct LBMarrays* S);
+void stream_couette_opt2(struct LBMarrays* S);
+//void stream_couette_opt3(struct LBMarrays* S);
+//void stream_couette_opt4(struct LBMarrays* S);
+
 void stream_couette_arrays(int nX, int nY, int nZ, int direction_size, double c_s,
+                           double* previous_particle_distributions,
+                           double* particle_distributions,
+                           const int* directions,
+                           const double* weights,
+                           const int* reverse_indexes);
+
+void stream_couette_arrays_opt1(int nX, int nY, int nZ, int direction_size, double c_s,
                            double* previous_particle_distributions,
                            double* particle_distributions,
                            const int* directions,
@@ -32,8 +44,14 @@ static struct ops stream_couette_baseline_flops(struct LBMarrays* S) {
 }
 
 static void register_stream_couette_functions() {
-    add_stream_couette_array_func(&stream_couette_arrays, &stream_couette_baseline_flops, "Stream Couette - Arrays Bl");
-    add_stream_couette_struct_func(&stream_couette_baseline, &stream_couette_baseline_flops, "Stream Couette - Structs Bl");
+    //add_stream_couette_struct_func(&stream_couette_baseline, &stream_couette_baseline_flops, "Stream Couette - Structs Bl");
+    add_stream_couette_struct_func(&stream_couette_opt1, &stream_couette_baseline_flops, "Stream Couette - Structs Opt1: Code Motion and Index Pre-computation");
+    add_stream_couette_struct_func(&stream_couette_opt2, &stream_couette_baseline_flops, "Stream Couette - Structs Opt2: Loop Order / Structure ");
+    //add_stream_couette_struct_func(&stream_couette_opt3, &stream_couette_baseline_flops, "Stream Couette - Structs Opt3: flat loop unoptimized");
+    //add_stream_couette_struct_func(&stream_couette_opt4, &stream_couette_baseline_flops, "Stream Couette - Structs Opt3: flat loop optimized");
+
+    //add_stream_couette_array_func(&stream_couette_arrays, &stream_couette_baseline_flops, "Stream Couette - Arrays Bl");
+    //add_stream_couette_array_func(&stream_couette_arrays_opt1, &stream_couette_baseline_flops, "Stream Couette - Arrays Opt1: Code Motion and Index Pre-computation");
 }
 
 #endif //CMDLINE_LBM_COUETTE_H
