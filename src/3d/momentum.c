@@ -58,3 +58,92 @@ void momentum_arrays(int nX, int nY, int nZ, int direction_size, double* density
         }
     }
 }
+
+
+////--- OPTIMIZATION STEP ONE - Index Precomputation - strength reductions ----- //////////////
+
+/**
+ * These functions calculate the macroscopic moments and the equilibrium distributions as described in
+ * the steps 1 & 2 of the Time Step Algorithm described in Section 3.3.2 of The Lattice Boltzmann Method book.
+ */
+
+
+// Flops: nX * nY * nZ * (4 * q)
+// Intops: 3 + nX * nY (1 + nZ * (5 + q))
+void momentumO1 (struct LBMarrays* S) {
+    int SnX = S->nX;
+    int SnY = S->nY;
+    int SnZ = S->nZ;
+    int SnXSnY = SnX * SnY;
+    int SnXSnYSnZ = SnX * SnY * SnZ;
+
+    int ySnX, zSnXSnY, index;
+
+
+    for(int x = 0; x < SnX; x++) {
+        for(int y = 0; y < SnY; y++) {
+
+            ySnX = y * SnX; 
+            for(int z = 0; z < SnZ; z++) {
+
+                zSnXSnY = z * SnXSnY;
+                double new_density = 0;
+                double u[] = {0, 0, 0};
+                index = x + ySnX + zSnXSnY;
+                for(int i = 0; i < S->direction_size; i++) {
+                    
+                    double dist = S->particle_distributions[index];
+                    new_density += dist;
+                    u[0] += dist * (double)S->directions[3 * i];
+                    u[1] += dist * (double)S->directions[3 * i + 1];
+                    u[2] += dist * (double)S->directions[3 * i + 2];
+
+                    index += SnXSnYSnZ;
+                }
+                index = zSnXSnY + ySnX + x;
+                S->density_field[index] = new_density;
+                S->velocity_field[3 * index] = u[0] / new_density;
+                S->velocity_field[3 * index + 1] = u[1] / new_density;
+                S->velocity_field[3 * index + 2] = u[2] / new_density;
+            }
+        }
+    }
+}
+
+// Flops: nX * nY * nZ * (4 * q)
+// Intops: 3 + nX * nY (1 + nZ * (3 + 4 * q))
+void momentumO2(struct LBMarrays* S) {
+
+    int SnX = S->nX;
+    int SnY = S->nY;
+    int SnZ = S->nZ;
+    int SnXSnY = SnX * SnY;
+    int SnXSnYSnZ = SnX * SnY * SnZ;
+
+    int ySnX, zSnXSnY, index;
+    for(int x = 0; x < S->nX; x++) {
+        for(int y = 0; y < S->nY; y++) {
+            ySnX = y * SnX; 
+            for(int z = 0; z < S->nZ; z++) {
+                zSnXSnY = z * SnXSnY;
+                double new_density = 0;
+                double u[] = {0, 0, 0};
+                for(int i = 0; i < S->direction_size; i++) {
+
+
+                    int index = x + ySnX + zSnXSnY + i * SnXSnYSnZ;
+                    double dist = S->particle_distributions[index];;
+                    new_density += dist;
+                    u[0] += dist * (double)S->directions[3 * i];
+                    u[1] += dist * (double)S->directions[3 * i + 1];
+                    u[2] += dist * (double)S->directions[3 * i + 2];
+                }
+                index = zSnXSnY + ySnX + x;
+                S->density_field[index] = new_density;
+                S->velocity_field[3 * index] = u[0] / new_density;
+                S->velocity_field[3 * index + 1] = u[1] / new_density;
+                S->velocity_field[3 * index + 2] = u[2] / new_density;
+            }
+        }
+    }
+}
