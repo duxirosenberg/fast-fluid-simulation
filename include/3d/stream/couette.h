@@ -11,10 +11,14 @@
 //  Ints:   // dirs: 3xq
             // rev_indexes: q
 void stream_couette_baseline(struct LBMarrays* S);
+void stream_couette_code_motion(struct LBMarrays* S);
+void stream_couette_loop_structure(struct LBMarrays* S);
+void stream_couette_opt0(struct LBMarrays* S);
 
 void stream_couette_opt1(struct LBMarrays* S);
+void stream_couette_opt1p5(struct LBMarrays* S);
 void stream_couette_opt2(struct LBMarrays* S);
-//void stream_couette_opt3(struct LBMarrays* S);
+void stream_couette_opt3(struct LBMarrays* S);
 //void stream_couette_opt4(struct LBMarrays* S);
 
 void stream_couette_arrays(int nX, int nY, int nZ, int direction_size, double c_s,
@@ -45,10 +49,8 @@ static struct ops stream_couette_baseline_flops(struct LBMarrays* S) {
 
 static void register_stream_couette_functions() {
     //add_stream_couette_struct_func(&stream_couette_baseline, &stream_couette_baseline_flops, "Stream Couette - Structs Bl");
-    add_stream_couette_struct_func(&stream_couette_opt1, &stream_couette_baseline_flops, "Stream Couette - Structs Opt1: Code Motion and Index Pre-computation");
-    add_stream_couette_struct_func(&stream_couette_opt2, &stream_couette_baseline_flops, "Stream Couette - Structs Opt2: Loop Order / Structure ");
-    //add_stream_couette_struct_func(&stream_couette_opt3, &stream_couette_baseline_flops, "Stream Couette - Structs Opt3: flat loop unoptimized");
-    //add_stream_couette_struct_func(&stream_couette_opt4, &stream_couette_baseline_flops, "Stream Couette - Structs Opt3: flat loop optimized");
+    add_stream_couette_struct_func(&stream_couette_code_motion, &stream_couette_baseline_flops, "Stream Couette - Structs Code Motion");
+    add_stream_couette_struct_func(&stream_couette_loop_structure, &stream_couette_baseline_flops, "Stream Couette - Structs Loop Structure");
 
     //add_stream_couette_array_func(&stream_couette_arrays, &stream_couette_baseline_flops, "Stream Couette - Arrays Bl");
     //add_stream_couette_array_func(&stream_couette_arrays_opt1, &stream_couette_baseline_flops, "Stream Couette - Arrays Opt1: Code Motion and Index Pre-computation");

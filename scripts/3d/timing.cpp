@@ -14,7 +14,7 @@ using namespace std;
 #define GAMMA_DOT 0.01
 
 #define REP 10
-#define TIME_STEPS 20
+#define TIME_STEPS 1
 
 #define N_X 10
 #define N_Y 15
@@ -59,7 +59,6 @@ double time_function(FuncEntry<T> f) {
     // This helps excluding timing overhead when measuring small runtimes.
     do{
         num_runs = (long) ((double) num_runs * multiplier);
-        // perform Nt steps of Simulation on initial conditions F_init, store the result in F
         auto cycles = (double) f.time_func(f.func, num_runs);
         multiplier = (CYCLES_REQUIRED) / cycles;
     } while (multiplier > 2);

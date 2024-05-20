@@ -16,7 +16,7 @@ extern "C" {
 }
 
 // Constants
-#define tol 1e-6
+#define tol 1e-10
 
 
 static const int D2Q9_DIRECTIONS[] = { 1,0,0, 0,1,0, -1,0,0, 0,-1,0, 1,1,0, -1,1,0, -1,-1,0, 1,-1,0, 0,0,0};
@@ -36,7 +36,7 @@ static const double D3Q27_WEIGHTS[] = {8.0/27.0,2.0/27.0,2.0/27.0,2.0/27.0,2.0/2
 // function to verify two results are the same // up to 6 decimal places
 int equal(double *arr1, double *arr2, int size) {
     for (int i = 0; i < size; i++) {
-        double diff = arr1[i] - arr2[i];
+        double diff = fabs(arr1[i] - arr2[i]);
         if (diff > tol) {
             return 0;
         }

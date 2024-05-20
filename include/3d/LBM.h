@@ -20,10 +20,6 @@ struct LBMarrays{
     double tau;
     double gamma_dot;
     int boundary_condition;
-    //new fields for optimization of couette
-    int* xDirections;
-    int* yDirections;
-    int* zDirections;
 };
 
 

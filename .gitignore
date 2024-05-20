@@ -39,3 +39,5 @@ cmake-build-debug/
 *.out
 *.app
 main
+visualization/run.sh
+.gitignore
