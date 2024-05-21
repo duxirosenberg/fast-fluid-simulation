@@ -57,12 +57,13 @@ static struct ops collision_baseline_flops(struct LBMarrays* S) {
     return ops;
 }
 
-static struct ops collision_flops_1(struct LBMarrays* S) {
+
+static struct ops collision_flops_2(struct LBMarrays* S) {
     long val0 = S->nX * S->nY * S->nZ;
     long val = val0 * S->direction_size;
     struct ops ops = {
-            2 + val * 29,
-            val * 23,
+            2 + val * 23,
+            val * 8 + 5*S->direction_size,
             val0*(S->direction_size+3+1)*(int)(sizeof(double)) + S->direction_size*(int)(3*sizeof(int) +sizeof(double)),
             val*(int)(sizeof(double))
     
@@ -74,9 +75,9 @@ static struct ops collision_flops_1(struct LBMarrays* S) {
 static void register_collision_functions() {
     // add_collision_array_func(&collision_arrays, &collision_baseline_flops, "Collision - Arrays Bl");
     add_collision_struct_func(&collision_baseline, &collision_baseline_flops, "Collision_0");  //baseline
-    add_collision_struct_func(&collision_2, &collision_baseline_flops, "Collision_2");   // basic strength increase, function inline etc
-    add_collision_struct_func(&collision_3, &collision_baseline_flops, "Collision_3");   // loop reordering for more efficient memory dynamic   
-    add_collision_struct_func(&collision_6, &collision_baseline_flops, "Collision_6");   // blocking of loops, will only help for sufficiently large gridss
+    add_collision_struct_func(&collision_2, &collision_flops_2, "Collision_2");   // basic strength increase, function inline etc
+    add_collision_struct_func(&collision_3, &collision_flops_2, "Collision_3");   // loop reordering for more efficient memory dynamic   
+    add_collision_struct_func(&collision_6, &collision_flops_2, "Collision_6");   // blocking of loops, will only help for sufficiently large gridss
 
 
 
