@@ -1,4 +1,2 @@
 iops,flops,bytes_read,bytes_write,function,cycles,DIRECTION_SIZE,NX,NY,NZ,TIMESTEPS,bytes
-1088,312,868,256,Momentum Baseline,3659.21,9,2,2,2,20,
-1088,312,868,256,Momentum - Structs Bl,3768.71,9,2,2,2,20,
-1088,312,868,256,Momentum - Arrays Bl,3650.61,9,2,2,2,20,
+92381184,61440,37748952,18874368,Stream Couette Baseline,1.63945e+08,9,64,64,64,1,

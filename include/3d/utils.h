@@ -16,7 +16,7 @@ extern "C" {
 }
 
 // Constants
-#define tol 1e-6
+#define tol 1e-10
 
 
 static const int D2Q9_DIRECTIONS[] = { 1,0,0, 0,1,0, -1,0,0, 0,-1,0, 1,1,0, -1,1,0, -1,-1,0, 1,-1,0, 0,0,0};
