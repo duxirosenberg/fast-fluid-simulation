@@ -44,7 +44,7 @@ static struct ops perform_timestep_baseline_flops(struct LBMarrays* S) {
 }
 
 static void register_lbm_function() {
-    add_lbm_array_func(&perform_timestep_array, &perform_timestep_baseline_flops, "LBM - Arrays Bl");
+    // add_lbm_array_func(&perform_timestep_array, &perform_timestep_baseline_flops, "LBM - Arrays Bl");
     add_lbm_struct_func(&perform_timestep_baseline, &perform_timestep_baseline_flops, "LBM - Structs Bl");
 }
 #endif
