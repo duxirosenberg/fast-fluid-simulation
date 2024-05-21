@@ -152,12 +152,6 @@ struct LBMarrays* init_struct(int direction_size, int boundary_condition) {
     solver->particle_distributions = (double*) malloc(distributions_flatten_length * sizeof(double));
     solver->reverse_indexes = (int*) malloc(solver->direction_size * sizeof(int));
 
-    //new fields needed for optimization of couette
-    solver->xDirections = (int*) malloc(solver->direction_size * sizeof(int));
-    solver->yDirections = (int*) malloc(solver->direction_size * sizeof(int));
-    solver->zDirections = (int*) malloc(solver->direction_size * sizeof(int));
-
-
     initialize(solver->nX, solver->nY, solver->nZ, solver->direction_size, solver->density_field, solver->velocity_field, solver->previous_particle_distributions, solver->particle_distributions, solver->directions, solver->weights, solver->reverse_indexes);
     return solver;
 }
