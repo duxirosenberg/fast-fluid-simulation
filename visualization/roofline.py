@@ -180,10 +180,16 @@ def roofline(
 
 
 
-    ax.text(1/46, 8/32,  s="x = functiondata fits into L1", fontsize="large", color="navy")
-    ax.text(1/46, 5/32,  s="x = functiondata fits into L2", fontsize="large", color="indigo")
-    ax.text(1/46, 3/32,  s="x = functiondata fits into L3", fontsize="large", color="purple")
-    ax.text(1/46, 2/32,  s="x = functiondata doesn't fit into cache", fontsize="large", color="darkviolet")
+    ax.text(1/46, 8/64,  s=".   = functiondata fits into L1 (NX small)", fontsize="large", color="black")
+    ax.text(1/46, 5/64,  s=".   = functiondata fits into L2", fontsize="large", color="black")
+    ax.text(1/46, 3/64,  s=".   = functiondata fits into L3", fontsize="large", color="black")
+    ax.text(1/46, 2/64,  s=".   = function data doesn't fit into cache (NX large)", fontsize="large", color="black")
+
+
+    ax.text(1/46, 8/64,  s="x", fontsize="large", color="navy")
+    ax.text(1/46, 5/64,  s="x", fontsize="large", color="indigo")
+    ax.text(1/46, 3/64,  s="x", fontsize="large", color="purple")
+    ax.text(1/46, 2/64,  s="x", fontsize="large", color="darkviolet")
 
 
 
