@@ -1,0 +1,126 @@
+hey das isch en churze guide wie mer möglichst schnell sinnvoll mit euler a eusem preojekt sinnvoll arbeite cha, bi mir funktioniert hoff für eu au, denn das alles i de shell isch hoffi das isch für linux wie apple glich...:
+
+Als start folgend brauchen wir immer das standard NETHZ passwort!!
+
+ich schriib immer zersch s wichtigste uus, falls ihr aber na für später oder idk wennd nahluege, schick ich immer na de link für mee infos.
+
+zum eifach nur uf euler iloge langed, eth VPN erreiche (hoff das hender scho iigrichtet...) und denn: im temrinal:
+
+ssh <dis_nethz_kürzel>@euler.ethz.ch
+
+denn na s password igeh und du bisch igloggt und dis terminal isch uf em logn-node vom euler....
+
+Falls das eure erste login sii wird isch na vermerkt!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+""""""""""""""""""""""
+On your first login, you need to accept the cluster's usage rules. Afterwards your account is created automatically. Please find below the user agreement for the Euler cluster as an example: 
+On Euler, the first login of a new user triggers a process that sends a verification code to the users ETH email address (USERNAME@ethz.ch, with USERNAME being the ETH account name). The user is then prompted to enter the verification code and by entering the correct code, the cluster account of the user is created. 
+""""""""""""""""""""""""""""""
+
+wenn er de igloggt hend chunt mer mit ctrl + d wieder use oder mit    exit   i de konsole.
+
+Falls ihr eu problemlos ii un uslogge chend isch bene. 
+
+
+
+De nächsti wichtig punkt isch, dass mer throeretisch de login (mit X11 via -Y flga)  so mache, dass direkt sache wie IDE und GUI  bruuche cha, aber das funktioniert irgendwie i gwüsse situation ned und mengisch (zB vorallem bi VSCODE, hanis vo kollege mal ghört, ned ganz sicher eb das immer na so isch....) macht das im hintergrind zvill ("suspiciuous") sache und cha dezue füere das temporär euler zuegriff blockt wird....
+für mich hanich aber folgendi  lösig gfunde:
+
+imene zweite terminal cha mer en folder mit euler "mounte". das heisst ihr generiered irgendwo en LEERE order und denn imene parent directory bruuched er folgende command:
+
+sshfs <nethz_kürzel>@euler.ethz.ch:/cluster/home/<nethz_kürzel>    <path_zu_eurem_leere_folder>
+
+jetzt wird de inhalt vo dem LEERE beidsiitig mit em "igangs/start" ordner vo eurem euler-account folder synchronisiert. Das bietet au die eifachst art  aa daata uf und vom euler cluster z kopiere, denn die synchronisierig, isch "system wiit" das heisst wenn ihr jetzt mit em file explorer oder vscode uf de ordner zuegriifed, gsehnd ihr au direkt was ihr uf euler hend etc ....
+
+
+zum das ganze wieder "clean" rückgängig mache (de folder unmounte) langed de command:
+
+fusermount -u /home/klappi/Documents/mount
+
+
+vo da isch d regle eifach muntet eure leer folder und logged er eu uf em eine terminal standard ii. Denn, normal code editiere plotte und git cha mer alles uf via dem gmountete folder  genau so wie bis jetzt
+und 
+cmake, make und run script  laufe laa macht mer uf em cluster terminal.
+
+
+
+
+/////////////////////////////////////////////////////////////////
+WORK ON INTERACTIVE NODE NOT LOGIN NODE::
+
+jetzt na wichtig zum richtig mit euler umgah:
+wenn ihr eu iigloggt hend sind ihr ufeme "login-node" und es isch ned denkt, dass mer d "ressource" vom login node mit udwendige jobs verbrucht sonder wennd dass mer mit eme spezifische form vo SLURM batch script jobs submitted wo dem im hintergrund laufed. Da das aber zufwendig isch zum schnell schnell lerne isch gits folgendes:
+
+wenn ihr folgende command im euler-terminal igebed ..
+
+salloc --time=05:00:00 
+
+[severikl@eu-login-35 ~]$ salloc --time=05:00:00
+salloc: Pending job allocation 59817638
+salloc: job 59817638 queued and waiting for resources
+salloc: job 59817638 has been allocated resources
+salloc: Granted job allocation 59817638
+salloc: Waiting for resource configuration
+salloc: Nodes eu-g9-044-1 are ready for job
+
+hend ihr en compute note für 5h allocated. Zum checke eb das klappt het und wie de node heist bruuched er squeue:
+
+[severikl@eu-login-35 ~]$ squeue 
+             JOBID PARTITION     NAME     USER ST       TIME  NODES NODELIST(REASON)
+          59817638 normal.24 interact severikl  R       1:53      1 eu-g9-044-1
+          
+zum jetzt de node interaktiv i de shell z bruuche wie ihr eu das gwohnt sind bruuched er ssh wie folgt:
+
+ssh eu-g9-044-1
+
+denn set eure terminal name gswitched ha zu:
+[severikl@eu-g9-044-1 ~]
+
+i dem terminal chend er jetzt sache laufe laa, (fast gliich) wie mers kennt
+
+./timing set funktioniere...
+bimene bashscript jedoch
+funktonier ./run.sh glaubs ned statt desse bruucht mers
+
+source run.sh
+
+
+zum zrugg zum login node z cho langed ctrl + d oder exit
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////
+MODULES:
+
+zum richtige module arrangiert z ha muss mer die lade, zuedem isch d default module library die alt und ned die neu...
+aso zum in es setting cho wo für eus alles laufe sett bruuche mer die folgende 3 command im terminal:
+
+env2lmod
+module load gcc/8.2.0
+module load cmake/3.9.4
+
+zum checke eb alles klappt het langed comman module list:
+Bispiel:
+
+[severikl@eu-g9-044-1 asl_fromdell]$ source prep.sh 
+
+The following have been reloaded with a version change:
+  1) gcc/4.8.5 => gcc/8.2.0
+
+[severikl@eu-g9-044-1 asl_fromdell]$ module list
+
+Currently Loaded Modules:
+  1) StdEnv   2) gcc/8.2.0   3) cmake/3.9.4  
+  
+  lend eu vom StdEnv ned verwirr das isch korrekt...
+  
+  ///////////////////////////////
+  
+  ich glaub das isch alles, also vo da weg
+  
+  mkdir buiild
+  cd buiild
+  cmake ..
+  make
+  ./timing
+
+  
+  set funktioniere ...
