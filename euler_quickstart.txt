@@ -22,7 +22,7 @@ Falls ihr eu problemlos ii un uslogge chend isch bene.
 
 
 
-De nächsti wichtig punkt isch, dass mer throeretisch de login (mit X11 via -Y flga)  so mache, dass direkt sache wie IDE und GUI  bruuche cha, aber das funktioniert irgendwie i gwüsse situation ned und mengisch (zB vorallem bi VSCODE, hanis vo kollege mal ghört, ned ganz sicher eb das immer na so isch....) macht das im hintergrind zvill ("suspiciuous") sache und cha dezue füere das temporär euler zuegriff blockt wird....
+De nächsti wichtig punkt isch, dass mer throeretisch de login (mit X11 via -Y flga)  so mache cha, dass mrr direkt sache wie IDE und GUI au  bruuche cha, aber das funktioniert irgendwie i gwüsse situation ned und mengisch (zB vorallem bi VSCODE, hanis vo kollege mal ghört, ned ganz sicher eb das immer na so isch....) macht das im hintergrind zvill ("suspiciuous") sache und cha dezue füere das temporär euler zuegriff blockt wird....
 für mich hanich aber folgendi  lösig gfunde:
 
 imene zweite terminal cha mer en folder mit euler "mounte". das heisst ihr generiered irgendwo en LEERE order und denn imene parent directory bruuched er folgende command:
@@ -34,10 +34,10 @@ jetzt wird de inhalt vo dem LEERE beidsiitig mit em "igangs/start" ordner vo eur
 
 zum das ganze wieder "clean" rückgängig mache (de folder unmounte) langed de command:
 
-fusermount -u /home/klappi/Documents/mount
+fusermount -u <path_zu_eurem_leere_folder>
+(de ordner wird denn aber wieder leer sii, aber im ordner uf euler set alles so gspeichered bliibe wies am schluss gsi isch)
 
-
-vo da isch d regle eifach muntet eure leer folder und logged er eu uf em eine terminal standard ii. Denn, normal code editiere plotte und git cha mer alles uf via dem gmountete folder  genau so wie bis jetzt
+vo da isch d regle eifach: mountet eure leer folder und logged eu uf em eine terminal standard gemäss ii. Denn, normal wie bis etzt code editiere plotte und git cha mer alles uf via dem gmountete folder mache
 und 
 cmake, make und run script  laufe laa macht mer uf em cluster terminal.
 
@@ -48,12 +48,12 @@ cmake, make und run script  laufe laa macht mer uf em cluster terminal.
 WORK ON INTERACTIVE NODE NOT LOGIN NODE::
 
 jetzt na wichtig zum richtig mit euler umgah:
-wenn ihr eu iigloggt hend sind ihr ufeme "login-node" und es isch ned denkt, dass mer d "ressource" vom login node mit udwendige jobs verbrucht sonder wennd dass mer mit eme spezifische form vo SLURM batch script jobs submitted wo dem im hintergrund laufed. Da das aber zufwendig isch zum schnell schnell lerne isch gits folgendes:
+wenn ihr eu iigloggt hend sind ihr ufeme "login-node" und es isch ned denkt, dass mer d "ressource" vom login node mit udwendige jobs verbrucht sonder wennd dass mer mit eme spezifische form vo SLURM batch script jobs submitted wo dem im hintergrund laufed. Da das aber zufwendig isch zum schnell schnell lerne gits folgendes:
 
 wenn ihr folgende command im euler-terminal igebed ..
 
 salloc --time=05:00:00 
-
+bsp:
 [severikl@eu-login-35 ~]$ salloc --time=05:00:00
 salloc: Pending job allocation 59817638
 salloc: job 59817638 queued and waiting for resources
@@ -62,13 +62,14 @@ salloc: Granted job allocation 59817638
 salloc: Waiting for resource configuration
 salloc: Nodes eu-g9-044-1 are ready for job
 
+(chan evtl au mal e minute duure...)
 hend ihr en compute note für 5h allocated. Zum checke eb das klappt het und wie de node heist bruuched er squeue:
 
 [severikl@eu-login-35 ~]$ squeue 
              JOBID PARTITION     NAME     USER ST       TIME  NODES NODELIST(REASON)
           59817638 normal.24 interact severikl  R       1:53      1 eu-g9-044-1
           
-zum jetzt de node interaktiv i de shell z bruuche wie ihr eu das gwohnt sind bruuched er ssh wie folgt:
+zum jetzt de node interaktiv i de shell z bruuche chenne, bruucht mer ssh wie folgt (richtig name verwende)
 
 ssh eu-g9-044-1
 
