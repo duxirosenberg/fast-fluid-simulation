@@ -4,7 +4,7 @@ Als start folgend brauchen wir immer das standard NETHZ passwort!!
 
 ich schriib immer zersch s wichtigste uus, falls ihr aber na für später oder idk wennd nahluege, schick ich immer na de link für mee infos.
 
-zum eifach nur uf euler iloge langed, eth VPN erreiche (hoff das hender scho iigrichtet...) und denn: im temrinal:
+zum eifach nur uf euler iloge langed, 1. eth VPN erreiche (hoff das hender scho iigrichtet...) und denn 2.: im temrinal:
 
 ssh <dis_nethz_kürzel>@euler.ethz.ch
 
@@ -18,29 +18,39 @@ On Euler, the first login of a new user triggers a process that sends a verifica
 
 wenn er de igloggt hend chunt mer mit ctrl + d wieder use oder mit    exit   i de konsole.
 
-Falls ihr eu problemlos ii un uslogge chend isch bene. 
+Falls ihr eu problemlos ii un uslogge chend isch bene. lueged mer wie mer demit schaffe cha:
 
 
 
-De nächsti wichtig punkt isch, dass mer throeretisch de login (mit X11 via -Y flga)  so mache cha, dass mrr direkt sache wie IDE und GUI au  bruuche cha, aber das funktioniert irgendwie i gwüsse situation ned und mengisch (zB vorallem bi VSCODE, hanis vo kollege mal ghört, ned ganz sicher eb das immer na so isch....) macht das im hintergrind zvill ("suspiciuous") sache und cha dezue füere das temporär euler zuegriff blockt wird....
+De nächsti wichtig punkt isch, dass mer throeretisch s login (mit X11 via -Y flag) so mache cha, dass mrr direkt sache wie IDE und GUI au bruuche chan, aber das funktioniert irgendwie i gwüsse situation ned (laggy odr buggy) und mengisch (zB vorallem bi VSCODE, hanis vo kollege mal ghört, ned ganz sicher eb das immer na so isch....) macht das im hintergrind zvill ("suspiciuous") sache und cha dezue füere das temporär euler zuegriff blockt wird....
 für mich hanich aber folgendi  lösig gfunde:
 
-imene zweite terminal cha mer en folder mit euler "mounte". das heisst ihr generiered irgendwo en LEERE order und denn imene parent directory bruuched er folgende command:
+imene zweite terminal cha mer en loakel folder miteme euler-folder "mounte". das heisst ihr generiered als vorbereitig irgendwo en LEERE order und denn im terminal imene parent directory bruuched er folgende command:
 
 sshfs <nethz_kürzel>@euler.ethz.ch:/cluster/home/<nethz_kürzel>    <path_zu_eurem_leere_folder>
 
-jetzt wird de inhalt vo dem LEERE beidsiitig mit em "igangs/start" ordner vo eurem euler-account folder synchronisiert. Das bietet au die eifachst art  aa daata uf und vom euler cluster z kopiere, denn die synchronisierig, isch "system wiit" das heisst wenn ihr jetzt mit em file explorer oder vscode uf de ordner zuegriifed, gsehnd ihr au direkt was ihr uf euler hend etc ....
+jetzt wird de inhalt vo dem LEERE folder beidsiitig mit em "igangs/start" ordner vo eurem euler-account folder synchronisiert. Das bietet au die eifachst art aa daata uf und vom euler cluster z kopiere, denn die synchronisierig, isch "system wiit" das heisst wenn ihr jetzt mit em file explorer oder vscode uf de ordner zuegriifed, gsehnd ihr au direkt was ihr uf euler hend etc
 
 
 zum das ganze wieder "clean" rückgängig mache (de folder unmounte) langed de command:
 
 fusermount -u <path_zu_eurem_leere_folder>
-(de ordner wird denn aber wieder leer sii, aber im ordner uf euler set alles so gspeichered bliibe wies am schluss gsi isch)
 
-vo da isch d regle eifach: mountet eure leer folder und logged eu uf em eine terminal standard gemäss ii. Denn, normal wie bis etzt code editiere plotte und git cha mer alles uf via dem gmountete folder mache
+
+(de ordner lokal wird denn wieder leer sii, falls er date sets oder so lokal bruchd efach usekopiere in en lokake folder befor ihr unmounted, aber im ordner uf euler wird sowieso alles so gspeichered bliibe wies am schluss gsi isch und ihr chend jederziit wieder druf zuegriife.
+Isch glaubs ned mega schlimm aber ich würd luege de folder immer z unmounte wenn ich en nüm bruuch, also de pc in ruhezuestand gah wird will er länger weg gend oder ihr de pc abefahre dund...)
+
+
+ASo vorgangsregke sind eifach: mountet eure leer folder und logged eu uf eim terminal standard gemäss uf eulerii. Denn, normal wie bis etzt code editiere und plotte cha mer alles uf via dem gmountete folder mache
 und 
 cmake, make und run script  laufe laa macht mer uf em cluster terminal.
 
+git sett vo beidem uus guet funktioniere (au wenn git evtl biz verwirrt isch und e warnig usit wod musch bestätige)
+(aso so eppis wie...)
+fatal: detected dubious ownership in repository at '<...>'
+To add an exception for this directory, call:
+
+        git config --global --add safe.directory <...>
 
 
 
@@ -63,13 +73,13 @@ salloc: Waiting for resource configuration
 salloc: Nodes eu-g9-044-1 are ready for job
 
 (chan evtl au mal e minute duure...)
-hend ihr en compute note für 5h allocated. Zum checke eb das klappt het und wie de node heist bruuched er squeue:
+hend ihr en compute note für 5h allocated. Zum checke eb das klappt het und wie de node heist bruuched er squeue(command funktionier nüm wenn er vom login node wegwechsled):
 
 [severikl@eu-login-35 ~]$ squeue 
-             JOBID PARTITION     NAME     USER ST       TIME  NODES NODELIST(REASON)
-          59817638 normal.24 interact severikl  R       1:53      1 eu-g9-044-1
+  JOBID PARTITION     NAME     USER ST       TIME  NODES NODELIST(REASON)
+  59817638 normal.24 interact severikl  R       1:53      1 eu-g9-044-1
           
-zum jetzt de node interaktiv i de shell z bruuche chenne, bruucht mer ssh wie folgt (richtig name verwende)
+zum jetzt de node interaktiv i de shell z bruuche chenne, bruucht mer ssh wie folgt (richtig node name verwende) zum de node zwechsle:
 
 ssh eu-g9-044-1
 
@@ -80,42 +90,51 @@ i dem terminal chend er jetzt sache laufe laa, (fast gliich) wie mers kennt
 
 ./timing set funktioniere...
 bimene bashscript jedoch
-funktonier ./run.sh glaubs ned statt desse bruucht mers
-
+funktioniert
+ ./run.sh 
+glaubs ned statt desse bruucht mer:
 source run.sh
 
 
-zum zrugg zum login node z cho langed ctrl + d oder exit
+
+zum zrugg zum login node z cho isch wieder ctrl + d oder exit
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
-MODULES:
+MODULES: (modul bruucht mer zum sache wo mer normalerwiis uf enere maschine instaliere, cmake, gcc, python etc)
 
-zum richtige module arrangiert z ha muss mer die lade, zuedem isch d default module library die alt und ned die neu...
-aso zum in es setting cho wo für eus alles laufe sett bruuche mer die folgende 3 command im terminal:
+Module muss mer lade, das gaht mit em command module load <module_name> (falls eppis fallsch glade hesch command module unload)
+
+Zuedem isch de default "module-stack" die alt und ned de neu; wo uf euler verfüegbar wer, drum muss mer meist als erst uf de neu switche mit env2lmod.
+
+aso zum in es setting cho wo für eus alles laufe sett bruuche mer die folgende 4 commands im terminal, 
 
 env2lmod
-module load gcc/8.2.0
-module load cmake/3.9.4
+module load gcc/11.4.0
+module load cmake/3.26.3
+module load binutils/2.41
 
-zum checke eb alles klappt het langed comman module list:
-Bispiel:
+(am eifachste all 5 linie in es file module.sh im erste folder ieschriibe und sobald er uf em interactive compute note sind das mit "source module.sh" laufe la).
 
-[severikl@eu-g9-044-1 asl_fromdell]$ source prep.sh 
-
-The following have been reloaded with a version change:
-  1) gcc/4.8.5 => gcc/8.2.0
-
+zum checke eb alles klappt het hilft de command module list:
+Bispiel output:
 [severikl@eu-g9-044-1 asl_fromdell]$ module list
 
 Currently Loaded Modules:
-  1) StdEnv   2) gcc/8.2.0   3) cmake/3.9.4  
+  1) StdEnv   2) gcc/8.2.0   3) cmake/3.9.4  4) binutils/2.41
   
-  lend eu vom StdEnv ned verwirr das isch korrekt...
+  lend eu vom StdEnv ned verwirre das isch korrekt...
   
-  ///////////////////////////////
+
+module lade muss mer jedesmal wenn mer wieder neu uf euler iloged
+
+//////////////////////////////////////////////////
+
+
+
   
-  ich glaub das isch alles, also vo da weg
+  ich glaub das isch alles, 
+  also vo da weg eifach wiiter mache und
   
   mkdir buiild
   cd buiild
@@ -123,5 +142,18 @@ Currently Loaded Modules:
   make
   ./timing
 
-  
   set funktioniere ...
+
+  ////////////
+
+  wiiteri infos gits sicher uf 
+
+  https://scicomp.ethz.ch/wiki/Tutorials
+
+  https://www.gdc-docs.ethz.ch/EulerManual/site/overview/
+
+  https://scicomp.ethz.ch/w/images/b/be/Getting_started_with_Euler_%28February_2020%29.pdf
+
+  oder bi mir nafrege, aber allzu vill weissi eigentlich au ned :D
+  lg severin
+
