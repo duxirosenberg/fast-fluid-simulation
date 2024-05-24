@@ -140,11 +140,14 @@ void stream_periodic_O2(struct LBMarrays* S) {
 
 void stream_periodic_memcpy(struct LBMarrays* S, int time) {
     for (int i = 0; i < S->direction_size; i++) {
+        // 6 * d
         int directionX = S->directions[3 * i];
         int directionY = S->directions[3 * i + 1];
         int directionZ = S->directions[3 * i + 2];
-        int distIndex = i*S->nXYZ;
-
+        int distIndex = i * S->nXYZ;
+        // D3Q27: 13 iops
+        // D3Q15: 13 iops
+        // D2Q9: 1 iops
         if(directionX == 0 && directionY == 0 && directionZ == 0) {
             memcpy(&S->particle_distributions[distIndex], &S->previous_particle_distributions[distIndex], (sizeof(double)) * S->nXYZ);
         } else if(directionX == 0 && directionY == 0 && directionZ == -1) {
@@ -154,6 +157,9 @@ void stream_periodic_memcpy(struct LBMarrays* S, int time) {
             memcpy(&S->particle_distributions[distIndex + S->nXY], &S->previous_particle_distributions[distIndex], (sizeof(double)) * (S->nXYZ - S->nXY));
             memcpy(&S->particle_distributions[distIndex], &S->previous_particle_distributions[distIndex + S->nXYZ - S->nXY], (sizeof(double)) * S->nXY);
         } else if(directionX == 0 && directionY == -1) {
+            // D3Q27: z * 39 iops
+            // D3Q15: z * 13 iops
+            // D2Q9:  z * 13 iops
             for (int z = 0; z < S->nZ; z++) {
                 int zmd = (S->nZ + z - directionY) % S->nZ;
                 int otherZIndex = zmd * S->nXY + distIndex;
@@ -162,6 +168,9 @@ void stream_periodic_memcpy(struct LBMarrays* S, int time) {
                 memcpy(&S->particle_distributions[zIndex + S->nXY - S->nX], &S->previous_particle_distributions[otherZIndex], (sizeof(double)) * S->nX);
             }
         } else if(directionX == 0 && directionY == 1) {
+            // D3Q27: z * 39 iops
+            // D3Q15: z * 13 iops
+            // D2Q9:  z * 13 iops
             for (int z = 0; z < S->nZ; z++) {
                 int zmd = (S->nZ + z - directionY) % S->nZ;
                 int otherZIndex = zmd * S->nXY + distIndex;
@@ -170,6 +179,9 @@ void stream_periodic_memcpy(struct LBMarrays* S, int time) {
                 memcpy(&S->particle_distributions[zIndex], &S->previous_particle_distributions[otherZIndex + S->nXY - S->nX], (sizeof(double)) * S->nX);
             }
         } else if(directionX == -1) {
+            // D3Q27: 9 * z * (7 + 12 * y) iops
+            // D3Q15: 5 * z * (7 + 12 * y) iops
+            // D2Q9:  3 * z * (7 + 12 * y) iops
             for (int z = 0; z < S->nZ; z++) {
                 int zmd = (S->nZ + z - directionY) % S->nZ;
                 int otherZIndex = zmd * S->nXY + distIndex;
@@ -183,6 +195,9 @@ void stream_periodic_memcpy(struct LBMarrays* S, int time) {
                 }
             }
         } else if(directionX == 1) {
+            // D3Q27: 9 * z * (7 + 12 * y) iops
+            // D3Q15: 5 * z * (7 + 12 * y) iops
+            // D2Q9:  3 * z * (7 + 12 * y) iops
             for (int z = 0; z < S->nZ; z++) {
                 int zmd = (S->nZ + z - directionY) % S->nZ;
                 int otherZIndex = zmd * S->nXY + distIndex;
