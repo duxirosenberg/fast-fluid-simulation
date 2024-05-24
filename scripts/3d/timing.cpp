@@ -517,9 +517,9 @@ void add_lbm_array_func(comp_func_arrays f, calc_flops calc_ops, const char* nam
 }
 
 int main(int argc, char* argv[]) {
-    bool test_collision(false);
-    bool test_momentum(false);
-    int test_stream(2);
+    bool test_collision(true);
+    bool test_momentum(true);
+    int test_stream(4);
     bool test_LBM(false);
     bool reset_datafile(false);
     NX_g = N_X;
