@@ -74,20 +74,20 @@ static struct ops collision_flops_2(struct LBMarrays* S) {
 
 static void register_collision_functions() {
     // add_collision_array_func(&collision_arrays, &collision_baseline_flops, "Collision - Arrays Bl");
-    add_collision_struct_func(&collision_baseline, &collision_baseline_flops, "Collision_0");  //baseline
-    add_collision_struct_func(&collision_2, &collision_flops_2, "Collision_2");   // basic strength increase, function inline etc
-    add_collision_struct_func(&collision_3, &collision_flops_2, "Collision_3");   // loop reordering for more efficient memory dynamic   
-    add_collision_struct_func(&collision_6, &collision_flops_2, "Collision_6");   // blocking of loops, will only help for sufficiently large gridss
+    // add_collision_struct_func(&collision_baseline, &collision_baseline_flops, "Collision_0");  //baseline
+    // add_collision_struct_func(&collision_2, &collision_flops_2, "Collision_2");   // basic strength increase, function inline etc
+    // add_collision_struct_func(&collision_3, &collision_flops_2, "Collision_3");   // loop reordering for more efficient memory dynamic   
+    // add_collision_struct_func(&collision_6, &collision_flops_2, "Collision_6");   // blocking of loops, will only help for sufficiently large gridss 1024
 
 
 
     // add_collision_struct_func(&collision_1, &collision_baseline_flops, "Collision_1");
-    // add_collision_struct_func(&collision_4, &collision_baseline_flops, "Collision_4"); Blocking with different sizes ..
-    // add_collision_struct_func(&collision_5, &collision_baseline_flops, "Collision_5"); Blocking with different sizes ..
-    // add_collision_struct_func(&collision_5, &collision_baseline_flops, "Collision_7"); Blocking with different sizes ..
+    // add_collision_struct_func(&collision_4, &collision_baseline_flops, "Collision_4"); Blocking with 256
+    // add_collision_struct_func(&collision_5, &collision_baseline_flops, "Collision_5"); Blocking with 512
+    // add_collision_struct_func(&collision_5, &collision_baseline_flops, "Collision_7"); Blocking with 2048
 
-    // add_collision_struct_func(&collision_8, &collision_baseline_flops, "Collision_8"); // vectorisation works but non efficient
-    // add_collision_struct_func(&collision_9, &collision_baseline_flops, "Collision_9");  // doesnt work yet sadly ...
+    add_collision_struct_func(&collision_8, &collision_baseline_flops, "Collision_8"); // vectorisation works but non efficient
+    add_collision_struct_func(&collision_9, &collision_baseline_flops, "Collision_9");  // doesnt work yet sadly ...
 }
 
 #endif //CMDLINE_LBM_COLLISION_H

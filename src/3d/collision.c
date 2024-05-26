@@ -1,5 +1,9 @@
 #include "LBM.h"
 #include <immintrin.h>
+
+
+#include<assert.h>
+#include<stdbool.h>
 /**
  * These functions simulate the collision as described in step 3 of the Time Step Algorithm described in
  * Section 3.3.2 of The Lattice Boltzmann Method book.
@@ -219,6 +223,472 @@ void collision_3(struct LBMarrays* S) {
 
 
 
+void collision_6(struct LBMarrays* S) {
+    // const int iBB = 9;
+    const int nBB = 1024;
+    const double omtauinv = 1.0 - S->tau_inv;
+
+        // for(int ii = 0; ii < S->direction_size; ii+=iBB) {
+                // for(int i = ii; i < ii+iBB; ++i) {
+
+
+
+        for(int nxyz = 0; nxyz < S->nXYZ; nxyz+=nBB) {
+            for(int i = 0; i < S->direction_size; i++) {
+                    double weight = S->weights[i];
+                    const int directionX = S->directions[3 * i];
+                    const int directionY = S->directions[3 * i + 1];
+                    const int directionZ = S->directions[3 * i + 2];
+
+                for(int feqIndex = nxyz; feqIndex < nxyz+nBB; ++feqIndex) {
+
+
+
+                    double velocityX = S->velocity_field[3 * feqIndex];
+                    double velocityY = S->velocity_field[3 * feqIndex + 1];
+                    double velocityZ = S->velocity_field[3 * feqIndex + 2];
+
+
+                    double dot_product = velocityX * directionX + velocityY * directionY + velocityZ * directionZ;
+                    double norm_square = velocityX * velocityX + velocityY * velocityY + velocityZ * velocityZ;
+
+                    const double feq = 
+                    weight * S->density_field[feqIndex] * (1.0 + dot_product / 
+                    (S->c_s2) + dot_product * dot_product / (2 * S->c_s4) - norm_square / (2 * S->c_s2));
+
+
+
+                    int index = feqIndex + i * S->nXYZ;
+                    S->previous_particle_distributions[index] = omtauinv * S->particle_distributions[index] + S->tau_inv * feq;
+                
+            }
+        }
+    }
+}
+
+
+
+void collision_8(struct LBMarrays* S) {
+    // const int iBB = 9;
+    const int nBB = 512;
+    // const int nBB = 1024;
+    const double omtauinv = 1.0 - S->tau_inv;
+
+// 0xFFFFFFFF : 0
+// __m256i _mm256_cmpeq_epi32 (__m256i a, __m256i b)
+// __m128i _mm_cmpeq_epi32 (__m128i a, __m128i b)
+// __m128i _mm_set_epi32 (int e3, int e2, int e1, int e0)
+// __m256i _mm256_set_epi32 (int e7, int e6, int e5, int e4, int e3, int e2, int e1, int e0)
+
+
+        __m128i true4_i32 =  _mm_set_epi32(0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF);
+        // __m128i ones4_i32 =  _mm_set_epi32(1, 1, 1, 1);
+        // __m128i true4_i32 = _mm_cmpeq_epi32 (ones4_i32, ones4_i32);
+
+
+        for(int nxyz = 0; nxyz < S->nXYZ; nxyz+=nBB) {
+            for(int i = 0; i < S->direction_size; i++) {
+
+                    double weight = S->weights[i];
+
+
+
+                    // make 4 in a row on 3 vectors...
+                    // __m128i dirs_tmp = _mm_loadu_si128(S->directions + 3*i);
+                    __m128i dirs_tmp = _mm_maskload_epi32 (S->directions + 3*i, true4_i32);
+                    __m256d dirsX  = _mm256_cvtepi32_pd(dirs_tmp);
+
+
+                    // const int directionX = S->directions[3 * i];
+                    // const int directionY = S->directions[3 * i + 1];
+                    // const int directionZ = S->directions[3 * i + 2];
+
+                for(int feqIndex = nxyz; feqIndex < nxyz+nBB; ++feqIndex) {
+
+
+
+                    __m256d velsX = _mm256_loadu_pd(S->velocity_field + 3*i);
+                    // double velocityX = S->velocity_field[3 * feqIndex];
+                    // double velocityY = S->velocity_field[3 * feqIndex + 1];
+                    // double velocityZ = S->velocity_field[3 * feqIndex + 2];
+
+
+                    // double dot_product = velocityX * directionX + velocityY * directionY + velocityZ * directionZ;
+                    // double norm_square = velocityX * velocityX + velocityY * velocityY + velocityZ * velocityZ;
+                    // _MM_SHUFFLE(3,2,1,0)  not shuffle ..
+
+                    __m256d dv_X2   = _mm256_mul_pd(dirsX, velsX);
+                    __m256d velsX2 = _mm256_mul_pd(velsX, velsX);
+
+                    __m256d dv_X_r0    = _mm256_hadd_pd(dv_X2, dv_X2);
+                    __m256d vels_X2_r0 = _mm256_hadd_pd(velsX2, velsX2);
+
+
+                    __m256d dv_X_r1    = _mm256_permute4x64_pd(dv_X2, _MM_SHUFFLE(1,0,3,2));
+                    __m256d vels_X2_r1 = _mm256_permute4x64_pd(velsX2, _MM_SHUFFLE(1,0,3,2));
+
+                    __m256d dv_dot     =_mm256_add_pd (dv_X_r0, dv_X_r1);
+                    __m256d vels_norm  =_mm256_add_pd (vels_X2_r0, vels_X2_r1);
+
+                    double dot_product = _mm256_cvtsd_f64(dv_dot);
+                    double norm_square = _mm256_cvtsd_f64(vels_norm);
+
+                    
+
+                    const double feq = 
+                    weight * S->density_field[feqIndex] * (1.0 + dot_product / 
+                    (S->c_s2) + dot_product * dot_product / (2 * S->c_s4) - norm_square / (2 * S->c_s2));
+
+
+
+                    int index = feqIndex + i * S->nXYZ;
+                    S->previous_particle_distributions[index] = omtauinv * S->particle_distributions[index] + S->tau_inv * feq;
+                
+            }
+        }
+    }
+}
+
+
+#include<stdio.h>
+#include<math.h>
+
+
+void collision_9_debug(struct LBMarrays* S) {
+    // const int iBB = 9;
+    const int nBB = 1024;
+    const double omtauinv = 1.0 - S->tau_inv;
+
+
+    double tmptmp[4];
+    
+
+
+
+        __m256d ones_pd      = _mm256_set1_pd(1.0);
+        __m256d CS2inv_pd    = _mm256_set1_pd(1.0/S->c_s2);
+        __m256d twoCS2inv_pd = _mm256_set1_pd(0.5/S->c_s2);
+        __m256d twoCS4inv_pd = _mm256_set1_pd(0.5/S->c_s4);
+        __m256d TAUinv_pd    = _mm256_set1_pd(S->tau_inv);
+        __m256d omTAUinv_pd  = _mm256_set1_pd(omtauinv);
+
+
+        __m128i true4_i32 =  _mm_set_epi32(0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF);
+        // __m256i first_i64 =  _mm256_set_epi64x( 0xFFFFFFFFFFFFFFFF,0,0,0);
+        
+
+            for(int i = 0; i < S->direction_size; i++) { 
+
+                    double weight = S->weights[i];
+
+                    __m256d weight_4 = _mm256_set1_pd(weight);
+                    __m256d tmpA     = _mm256_mul_pd(weight_4,TAUinv_pd);
+
+
+                    __m128i dirs_tmp = _mm_maskload_epi32(S->directions + 3*i, true4_i32);
+                    __m256d dirsX  = _mm256_cvtepi32_pd(dirs_tmp);
+                    __m256d dirsX_0 = _mm256_permute4x64_pd(dirsX, _MM_SHUFFLE(0,2,1,0));
+                    __m256d dirsX_1 = _mm256_permute4x64_pd(dirsX, _MM_SHUFFLE(1,0,2,1));
+                    __m256d dirsX_2 = _mm256_permute4x64_pd(dirsX, _MM_SHUFFLE(2,1,0,2));
+
+
+                
+                for(int feqIndex = 0; feqIndex < S->nXYZ; feqIndex+=4) {
+                    int index = feqIndex + i * S->nXYZ;
+
+                    __m256d vels_X_0 = _mm256_loadu_pd(S->velocity_field + 3*feqIndex);
+                    __m256d vels_X_1 = _mm256_loadu_pd(S->velocity_field + 3*feqIndex+ 4);
+                    __m256d vels_X_2 = _mm256_loadu_pd(S->velocity_field + 3*feqIndex+ 8);
+
+
+                    __m256d df_pd = _mm256_load_pd(S->density_field+feqIndex);
+                    __m256d PD_pd = _mm256_load_pd(S->particle_distributions+index);
+
+                    /////////////////////////////////////////////////////////////
+                    /////////////////////////////////////////////////////////////
+                    /////////////////////////////////////////////////////////////
+                    /////////////////////////////////////////////////////////////
+                    /////////////////////////////////////////////////////////////
+                    /////////////////////////////////////////////////////////////
+
+                    // simplified version.
+                    // __m256d dv_X2   = _mm256_mul_pd(dirsX_0, vels_X_0);
+                    // __m256d velsX2 = _mm256_mul_pd(vels_X_0, vels_X_0);
+                    // __m256d dv_X_r0    = _mm256_hadd_pd(dv_X2, dv_X2);
+                    // __m256d vels_X2_r0 = _mm256_hadd_pd(velsX2, velsX2);
+                    // __m256d dv_X_r1    = _mm256_permute4x64_pd(dv_X2, _MM_SHUFFLE(1,0,3,2));
+                    // __m256d vels_X2_r1 = _mm256_permute4x64_pd(velsX2, _MM_SHUFFLE(1,0,3,2));
+                    // __m256d dv_dot2     =_mm256_add_pd(dv_X_r0, dv_X_r1);
+                    // __m256d v_norm2  =_mm256_add_pd(vels_X2_r0, vels_X2_r1);
+                    // double dot_product2 = _mm256_cvtsd_f64(dv_dot2);
+                    // double norm_square2 = _mm256_cvtsd_f64(v_norm2);
+                    // const double feq_soll =  weight * S->density_field[feqIndex] * (1.0 + dot_product2 / 
+                    // (S->c_s2) + dot_product2 * dot_product2 / (2 * S->c_s4) - norm_square2 / (2 * S->c_s2));
+                    // double D_soll = omtauinv * S->particle_distributions[index] + S->tau_inv * feq_soll;
+
+                    double D_sub[4];
+                    double dv_dot_sub[4];
+                    double v_norm_sub[4];
+
+                    for(int sub = 0; sub<4; ++sub){
+                        const int directionX = S->directions[3 * i];
+                        const int directionY = S->directions[3 * i + 1];
+                        const int directionZ = S->directions[3 * i + 2];
+
+
+                        double velocityX = S->velocity_field[sub + 3 * feqIndex];
+                        double velocityY = S->velocity_field[sub + 3 * feqIndex + 1];
+                        double velocityZ = S->velocity_field[sub + 3 * feqIndex + 2];
+
+                        dv_dot_sub[sub] = velocityX * directionX + velocityY * directionY + velocityZ * directionZ;
+                        v_norm_sub[sub] = velocityX * velocityX + velocityY * velocityY + velocityZ * velocityZ;
+
+                        const double feq_sub = 
+                        weight * S->density_field[feqIndex] * (1.0 + dv_dot_sub[sub] / 
+                        (S->c_s2) + dv_dot_sub[sub] * dv_dot_sub[sub] / (2 * S->c_s4) - v_norm_sub[sub] / (2 * S->c_s2));
+
+                        D_sub[sub] = omtauinv * S->particle_distributions[index] + S->tau_inv * feq_sub;
+                    }
+
+                    /////////////////////////////////////////////////////////////
+                    /////////////////////////////////////////////////////////////
+                    /////////////////////////////////////////////////////////////
+                    /////////////////////////////////////////////////////////////
+                    /////////////////////////////////////////////////////////////
+                    /////////////////////////////////////////////////////////////
+
+
+                    __m256d dv_X2_0   = _mm256_mul_pd(dirsX_0, vels_X_0);
+                    __m256d dv_X2_1   = _mm256_mul_pd(dirsX_1, vels_X_1);
+                    __m256d dv_X2_2   = _mm256_mul_pd(dirsX_2, vels_X_2);
+                    
+                    __m256d vel_X2_0 = _mm256_mul_pd(vels_X_0, vels_X_0);
+                    __m256d vel_X2_1 = _mm256_mul_pd(vels_X_1, vels_X_1);
+                    __m256d vel_X2_2=  _mm256_mul_pd(vels_X_2, vels_X_2);
+
+                    // //////////////////////////////////////////////
+
+                    __m256d dv_A    = _mm256_hadd_pd(dv_X2_0, dv_X2_1); //7
+                    __m256d dv_B    = _mm256_hadd_pd(dv_X2_1,dv_X2_2);  //7
+                    __m256d dv_rest = _mm256_permute2f128_pd(dv_X2_0, dv_X2_2, _MM_SHUFFLE(0,2,0,1)); //3
+                    __m256d dv_AB   = _mm256_blend_pd(dv_A,dv_B, 0b1100); //2 
+                    __m256d dv_dot  = _mm256_add_pd(dv_AB,dv_rest);  // 4
+                    
+
+                    __m256d vel_A    = _mm256_hadd_pd(vel_X2_0, vel_X2_1); //7
+                    __m256d vel_B    = _mm256_hadd_pd(vel_X2_1,vel_X2_2); //7
+                    __m256d vel_rest = _mm256_permute2f128_pd(vel_X2_0, vel_X2_2, _MM_SHUFFLE(0,2,0,1));//3
+                    __m256d vel_AB   = _mm256_blend_pd(vel_A,vel_B, 0b1100); //2
+                    __m256d v_norm   = _mm256_add_pd(vel_AB,vel_rest);//4
+
+
+                    // //////////////////////////////////////////////
+
+
+
+            //  D_sub[sub] = 
+            //      omtauinv * S->particle_distributions[index] 
+            //      + 
+            //      S->tau_inv * weight * S->density_field[feqIndex] 
+            //          *(
+            //                  1.0 
+            //                  + 
+            //                  dv_dot_sub[sub] / (S->c_s2) 
+            //                  + 
+            //                  dv_dot_sub[sub] * dv_dot_sub[sub] / (2 * S->c_s4)
+            //                  - 
+            //                  v_norm_sub[sub] / (2 * S->c_s2)
+            //          )
+                    
+                // V3
+
+                    //already up there ...// __m256d tmpA     = _mm256_mul_pd(weight_4,TAUinv_pd);
+                    __m256d tmpB          = _mm256_mul_pd(df_pd, tmpA);
+                    __m256d tmpC          = _mm256_mul_pd(omTAUinv_pd, PD_pd);
+                    // .... found the error
+
+
+
+
+                    // V1
+                    // __m256d A              = _mm256_fmadd_pd(dv_dot,twoCS4inv_pd, CS2inv_pd);
+                    // __m256d B              = _mm256_fmadd_pd(dv_dot, A, ones_pd);
+                    // __m256d C              = _mm256_fmsub_pd(v_norm, twoCS2inv_pd, B); //-1
+                    // __m256d F              = _mm256_mul_pd(tmpB,C);
+                    // __m256d D              = _mm256_fmsub_pd(omTAUinv_pd, PD_pd, C); //-1
+
+                    //V2
+
+                    // __m256d tmpB          = _mm256_mul_pd(df_pd, tmpA);
+                    // __m256d tmpC          = _mm256_mul_pd(omTAUinv_pd, tmpA); error
+
+                    __m256d A              = _mm256_fmadd_pd(dv_dot,twoCS2inv_pd, ones_pd);
+                    __m256d B              = _mm256_fmsub_pd(dv_dot, A, v_norm);
+                    __m256d C              = _mm256_fmadd_pd(B, twoCS2inv_pd, ones_pd);
+                    __m256d D              = _mm256_fmadd_pd(tmpB,C,tmpC);
+
+                    
+                    // //////////////////////////////////////////////
+                    // double tmp = _mm256_cvtsd_f64(D);
+                    // //////////////////////////////////////////////
+
+                    double D_arr[4];
+                    double dv_dot_arr[4];
+                    double v_norm_arr[4];
+                    _mm256_storeu_pd(D_arr, D);
+                    _mm256_storeu_pd(dv_dot_arr, dv_dot);
+                    _mm256_storeu_pd(v_norm_arr, v_norm);
+
+
+                    for(int sub = 0; sub < 4; ++sub){
+                        // printf("\n %d   ", sub);
+
+                        // printf("%e\n", D_sub[sub]);
+                        // printf("%e\n", D_arr[sub]);
+
+
+
+                    // //////////////////////////////////////////////
+                    // CLEAN
+                    //    assert( (fabs(dv_dot_sub[sub] - dv_dot_arr[sub])  < 1e-5)   );
+                    //    assert( (fabs(v_norm_sub[sub] - v_norm_arr[sub])  < 1e-5)   );
+                    // //////////////////////////////////////////////
+
+                        // dirty 
+                        // printf("  %e  ", fabs(D_sub[sub] - D_arr[sub]) );
+                        // assert( (fabs(D_sub[sub] - D_arr[sub])  < 1e-5)   );
+
+
+
+                        
+                        // S->previous_particle_distributions[sub + index] = D_arr[sub];
+
+                        // S->previous_particle_distributions[sub + index] = D_sub[sub];
+                        // works ...
+                    }
+                    
+
+                    // assert(false);
+                    
+
+
+                    // S->previous_particle_distributions[index] = tmptmp[0];
+                    // double a = tmptmp[0];    
+                    // S->previous_particle_distributions[index] = ;
+
+
+
+
+
+
+                    // accessed out of bounds
+                    // _mm256_maskstore_pd(ret, first_i64, ones_pd);
+                    // _mm256_maskstore_pd(S->previous_particle_distributions+index, first_i64, D);
+                    _mm256_storeu_pd(S->previous_particle_distributions+index, D);
+
+
+        }
+    }
+}
+
+
+void collision_9(struct LBMarrays* S) {
+    // const int iBB = 9;
+    // const int nBB = 1024;
+    const double omtauinv = 1.0 - S->tau_inv;
+
+
+        __m256d ones_pd      = _mm256_set1_pd(1.0);
+        __m256d CS2inv_pd    = _mm256_set1_pd(1.0/S->c_s2);
+        __m256d twoCS2inv_pd = _mm256_set1_pd(0.5/S->c_s2);
+        __m256d twoCS4inv_pd = _mm256_set1_pd(0.5/S->c_s4);
+        __m256d TAUinv_pd    = _mm256_set1_pd(S->tau_inv);
+        __m256d omTAUinv_pd  = _mm256_set1_pd(omtauinv);
+
+
+        __m128i true4_i32 =  _mm_set_epi32(0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF);
+        
+
+            for(int i = 0; i < S->direction_size; i++) { 
+
+                    double weight = S->weights[i];
+
+                    __m256d weight_4 = _mm256_set1_pd(weight);
+                    __m256d tmpA     = _mm256_mul_pd(weight_4,TAUinv_pd);
+
+
+                    __m128i dirs_tmp = _mm_maskload_epi32(S->directions + 3*i, true4_i32);
+                    __m256d dirsX  = _mm256_cvtepi32_pd(dirs_tmp);
+                    __m256d dirsX_0 = _mm256_permute4x64_pd(dirsX, _MM_SHUFFLE(0,2,1,0));
+                    __m256d dirsX_1 = _mm256_permute4x64_pd(dirsX, _MM_SHUFFLE(1,0,2,1));
+                    __m256d dirsX_2 = _mm256_permute4x64_pd(dirsX, _MM_SHUFFLE(2,1,0,2));
+
+
+                
+                for(int feqIndex = 0; feqIndex < S->nXYZ; feqIndex+=4) {
+                    int index = feqIndex + i * S->nXYZ;
+
+                    __m256d vels_X_0 = _mm256_loadu_pd(S->velocity_field + 3*feqIndex);
+                    __m256d vels_X_1 = _mm256_loadu_pd(S->velocity_field + 3*feqIndex+ 4);
+                    __m256d vels_X_2 = _mm256_loadu_pd(S->velocity_field + 3*feqIndex+ 8);
+
+
+                    __m256d df_pd = _mm256_load_pd(S->density_field+feqIndex);
+                    __m256d PD_pd = _mm256_load_pd(S->particle_distributions+index);
+
+
+                    __m256d dv_X2_0   = _mm256_mul_pd(dirsX_0, vels_X_0);
+                    __m256d dv_X2_1   = _mm256_mul_pd(dirsX_1, vels_X_1);
+                    __m256d dv_X2_2   = _mm256_mul_pd(dirsX_2, vels_X_2);
+                    
+                    __m256d vel_X2_0 = _mm256_mul_pd(vels_X_0, vels_X_0);
+                    __m256d vel_X2_1 = _mm256_mul_pd(vels_X_1, vels_X_1);
+                    __m256d vel_X2_2=  _mm256_mul_pd(vels_X_2, vels_X_2);
+
+                    // //////////////////////////////////////////////
+
+                    __m256d dv_A    = _mm256_hadd_pd(dv_X2_0, dv_X2_1); //7
+                    __m256d dv_B    = _mm256_hadd_pd(dv_X2_1,dv_X2_2);  //7
+                    __m256d dv_rest = _mm256_permute2f128_pd(dv_X2_0, dv_X2_2, _MM_SHUFFLE(0,2,0,1)); //3
+                    __m256d dv_AB   = _mm256_blend_pd(dv_A,dv_B, 0b1100); //2 
+                    __m256d dv_dot  = _mm256_add_pd(dv_AB,dv_rest);  // 4
+                    
+
+                    __m256d vel_A    = _mm256_hadd_pd(vel_X2_0, vel_X2_1); //7
+                    __m256d vel_B    = _mm256_hadd_pd(vel_X2_1,vel_X2_2); //7
+                    __m256d vel_rest = _mm256_permute2f128_pd(vel_X2_0, vel_X2_2, _MM_SHUFFLE(0,2,0,1));//3
+                    __m256d vel_AB   = _mm256_blend_pd(vel_A,vel_B, 0b1100); //2
+                    __m256d v_norm   = _mm256_add_pd(vel_AB,vel_rest);//4
+
+
+                    __m256d tmpB          = _mm256_mul_pd(df_pd, tmpA);
+                    __m256d tmpC          = _mm256_mul_pd(omTAUinv_pd, PD_pd);
+
+                    __m256d A              = _mm256_fmadd_pd(dv_dot,twoCS2inv_pd, ones_pd);
+                    __m256d B              = _mm256_fmsub_pd(dv_dot, A, v_norm);
+                    __m256d C              = _mm256_fmadd_pd(B, twoCS2inv_pd, ones_pd);
+                    __m256d D              = _mm256_fmadd_pd(tmpB,C,tmpC);
+
+                    
+                    _mm256_storeu_pd(S->previous_particle_distributions+index, D);
+
+        }
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 void collision_4(struct LBMarrays* S) {
     // const int iBB = 9;
@@ -350,244 +820,6 @@ void collision_7(struct LBMarrays* S) {
         }
     }
 }
-
-void collision_6(struct LBMarrays* S) {
-    // const int iBB = 9;
-    const int nBB = 1024;
-    const double omtauinv = 1.0 - S->tau_inv;
-
-        // for(int ii = 0; ii < S->direction_size; ii+=iBB) {
-                // for(int i = ii; i < ii+iBB; ++i) {
-
-
-
-        for(int nxyz = 0; nxyz < S->nXYZ; nxyz+=nBB) {
-            for(int i = 0; i < S->direction_size; i++) {
-                    double weight = S->weights[i];
-                    const int directionX = S->directions[3 * i];
-                    const int directionY = S->directions[3 * i + 1];
-                    const int directionZ = S->directions[3 * i + 2];
-
-                for(int feqIndex = nxyz; feqIndex < nxyz+nBB; ++feqIndex) {
-
-
-
-                    double velocityX = S->velocity_field[3 * feqIndex];
-                    double velocityY = S->velocity_field[3 * feqIndex + 1];
-                    double velocityZ = S->velocity_field[3 * feqIndex + 2];
-
-
-                    double dot_product = velocityX * directionX + velocityY * directionY + velocityZ * directionZ;
-                    double norm_square = velocityX * velocityX + velocityY * velocityY + velocityZ * velocityZ;
-
-                    const double feq = 
-                    weight * S->density_field[feqIndex] * (1.0 + dot_product / 
-                    (S->c_s2) + dot_product * dot_product / (2 * S->c_s4) - norm_square / (2 * S->c_s2));
-
-
-
-                    int index = feqIndex + i * S->nXYZ;
-                    S->previous_particle_distributions[index] = omtauinv * S->particle_distributions[index] + S->tau_inv * feq;
-                
-            }
-        }
-    }
-}
-
-// first try without testing error :D:D
-
-void collision_8(struct LBMarrays* S) {
-    // const int iBB = 9;
-    const int nBB = 1024;
-    const double omtauinv = 1.0 - S->tau_inv;
-
-// 0xFFFFFFFF : 0
-// __m256i _mm256_cmpeq_epi32 (__m256i a, __m256i b)
-// __m128i _mm_cmpeq_epi32 (__m128i a, __m128i b)
-// __m128i _mm_set_epi32 (int e3, int e2, int e1, int e0)
-// __m256i _mm256_set_epi32 (int e7, int e6, int e5, int e4, int e3, int e2, int e1, int e0)
-
-
-        __m128i true4_i32 =  _mm_set_epi32(0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF);
-        // __m128i ones4_i32 =  _mm_set_epi32(1, 1, 1, 1);
-        // __m128i true4_i32 = _mm_cmpeq_epi32 (ones4_i32, ones4_i32);
-
-
-        for(int nxyz = 0; nxyz < S->nXYZ; nxyz+=nBB) {
-            for(int i = 0; i < S->direction_size; i++) {
-
-                    double weight = S->weights[i];
-
-
-
-                    // make 4 in a row on 3 vectors...
-                    // __m128i dirs_tmp = _mm_loadu_si128(S->directions + 3*i);
-                    __m128i dirs_tmp = _mm_maskload_epi32 (S->directions + 3*i, true4_i32);
-                    __m256d dirsX  = _mm256_cvtepi32_pd(dirs_tmp);
-
-
-
-
-                    // const int directionX = S->directions[3 * i];
-                    // const int directionY = S->directions[3 * i + 1];
-                    // const int directionZ = S->directions[3 * i + 2];
-
-                for(int feqIndex = nxyz; feqIndex < nxyz+nBB; ++feqIndex) {
-
-
-
-                    __m256d velsX = _mm256_loadu_pd(S->velocity_field + 3*i);
-                    // double velocityX = S->velocity_field[3 * feqIndex];
-                    // double velocityY = S->velocity_field[3 * feqIndex + 1];
-                    // double velocityZ = S->velocity_field[3 * feqIndex + 2];
-
-
-                    // double dot_product = velocityX * directionX + velocityY * directionY + velocityZ * directionZ;
-                    // double norm_square = velocityX * velocityX + velocityY * velocityY + velocityZ * velocityZ;
-                    // _MM_SHUFFLE(3,2,1,0)  not shuffle ..
-
-                    __m256d dv_X2   = _mm256_mul_pd(dirsX, velsX);
-                    __m256d velsX2 = _mm256_mul_pd(velsX, velsX);
-
-
-
-                    __m256d dv_X_r0    = _mm256_hadd_pd(dv_X2, dv_X2);
-                    __m256d vels_X2_r0 = _mm256_hadd_pd(velsX2, velsX2);
-
-
-                    __m256d dv_X_r1    = _mm256_permute4x64_pd(dv_X2, _MM_SHUFFLE(1,0,3,2));
-                    __m256d vels_X2_r1 = _mm256_permute4x64_pd(velsX2, _MM_SHUFFLE(1,0,3,2));
-
-                    __m256d dv_dot     =_mm256_add_pd (dv_X_r0, dv_X_r1);
-                    __m256d vels_norm  =_mm256_add_pd (vels_X2_r0, vels_X2_r1);
-
-                    double dot_product = _mm256_cvtsd_f64(dv_dot);
-                    double norm_square = _mm256_cvtsd_f64(vels_norm);
-
-                    
-
-                    const double feq = 
-                    weight * S->density_field[feqIndex] * (1.0 + dot_product / 
-                    (S->c_s2) + dot_product * dot_product / (2 * S->c_s4) - norm_square / (2 * S->c_s2));
-
-
-
-                    int index = feqIndex + i * S->nXYZ;
-                    S->previous_particle_distributions[index] = omtauinv * S->particle_distributions[index] + S->tau_inv * feq;
-                
-            }
-        }
-    }
-}
-
-
-
-
-
-
-void collision_9(struct LBMarrays* S) {
-    // const int iBB = 9;
-    const int nBB = 1024;
-    const double omtauinv = 1.0 - S->tau_inv;
-
-
-        __m128i true4_i32 =  _mm_set_epi32(0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF);
-
-        __m256d ones_pd = _mm256_set1_pd(1.0);
-        __m256d twoCS2inv_pd = _mm256_set1_pd(0.5/S->c_s2);
-        __m256d twoCS4inv_pd = _mm256_set1_pd(0.5/S->c_s4);
-    
-        __m256d TAUinv_pd = _mm256_set1_pd(S->tau_inv);
-        __m256d omTAUinv_pd = _mm256_set1_pd(omtauinv);
-        
-
-
-        for(int nxyz = 0; nxyz < S->nXYZ; nxyz+=nBB) {
-            for(int i = 0; i < S->direction_size; i+=4) {
-
-                    double weight = S->weights[i];
-                    __m256d weight_4 = _mm256_set1_pd (weight);
-
-
-                    __m128i dirs_tmp0 = _mm_maskload_epi32 (S->directions + 3*i, true4_i32);
-                    __m128i dirs_tmp1 = _mm_maskload_epi32 (S->directions + 3*i+4, true4_i32);
-                    __m128i dirs_tmp2 = _mm_maskload_epi32 (S->directions + 3*i+8, true4_i32);
-
-                    __m256d dirsX_0  = _mm256_cvtepi32_pd(dirs_tmp0);
-                    __m256d dirsX_1  = _mm256_cvtepi32_pd(dirs_tmp1);
-                    __m256d dirsX_2  = _mm256_cvtepi32_pd(dirs_tmp2);
-
-
-                for(int feqIndex = nxyz; feqIndex < nxyz+nBB; ++feqIndex) {
-
-
-
-                    __m256d vels_X_0 = _mm256_loadu_pd(S->velocity_field + 3*i);
-                    __m256d vels_X_1 = _mm256_loadu_pd(S->velocity_field + 3*i+ 4);
-                    __m256d vels_X_2 = _mm256_loadu_pd(S->velocity_field + 3*i+ 8);
-
-                    //////////////////////////////////////////////////////
-
-                    __m256d dv_X2_0   = _mm256_mul_pd(dirsX_0, vels_X_0);
-                    __m256d dv_X2_1   = _mm256_mul_pd(dirsX_1, vels_X_1);
-                    __m256d dv_X2_2   = _mm256_mul_pd(dirsX_2, vels_X_2);
-                    
-                    __m256d vel_X2_0 = _mm256_mul_pd(vels_X_0, vels_X_0);
-                    __m256d vel_X2_1 = _mm256_mul_pd(vels_X_1, vels_X_1);
-                    __m256d vel_X2_2=  _mm256_mul_pd(vels_X_2, vels_X_2);
-
-                    /////////////////////////////////
-
-                    // _MM_SHUFFLE(0,2,0,1) = 0b00100001
-
-                    // due to o3 compiler and ssa i dont think we have to reorder for latencies ...
-
-                    __m256d dv_A    = _mm256_hadd_pd(dv_X2_0, dv_X2_1); //7
-                    __m256d dv_B    = _mm256_hadd_pd(dv_X2_1,dv_X2_2);  //7
-                    __m256d dv_rest = _mm256_permute2f128_pd(dv_X2_0, dv_X2_2, _MM_SHUFFLE(0,2,0,1)); //3
-                    __m256d dv_AB   = _mm256_blend_pd(dv_A,dv_B, 0b1100); //2 
-                    __m256d dv_dot  = _mm256_add_pd(dv_AB,dv_rest);  // 4
-                    
-
-                    __m256d vel_A    = _mm256_hadd_pd(vel_X2_0, vel_X2_1); //7
-                    __m256d vel_B    = _mm256_hadd_pd(vel_X2_1,vel_X2_2); //7
-                    __m256d vel_rest = _mm256_permute2f128_pd(vel_X2_0, vel_X2_2, _MM_SHUFFLE(0,2,0,1));//3
-                    __m256d vel_AB   = _mm256_blend_pd(vel_A,vel_B, 0b1100); //2
-                    __m256d v_norm   = _mm256_add_pd(vel_AB,vel_rest);//4
-
-
-                    // double dot_product = _mm256_cvtsd_f64(dv_dot);
-                    // double norm_square = _mm256_cvtsd_f64(vels_norm);
-                    int index = feqIndex + i * S->nXYZ;
-                    __m256d df_pd = _mm256_load_pd(S->density_field+feqIndex);
-                    __m256d PD_pd = _mm256_load_pd(S->particle_distributions+index);
-
-
-                    // maybe unroll 4 times to avoid latencies, not sure if compiler does it here but if not its bad ...
-
-                    __m256d A              = _mm256_fmadd_pd (dv_dot,twoCS4inv_pd, twoCS2inv_pd);
-                    __m256d B              = _mm256_fmadd_pd (dv_dot, A, ones_pd);
-                    __m256d C              = _mm256_fmsub_pd (v_norm, twoCS2inv_pd, B); //-1
-
-                    __m256d preF0          = _mm256_mul_pd(weight_4,df_pd);
-                    __m256d preF1          = _mm256_mul_pd(TAUinv_pd,preF0);
-                    __m256d F              = _mm256_mul_pd(preF1,C);
-                    __m256d RET            = _mm256_fmsub_pd(omTAUinv_pd, PD_pd, C); //-1
-
-                    _mm256_store_pd(S->previous_particle_distributions+index, RET);
-
-
-                    // const double feq = 
-                    // weight * S->density_field[feqIndex] * (1.0+dot_product*cs2     +         dot_product * dot_product*cs4        -      norm_square *cs2;
-                    // S->previous_particle_distributions[index] = omtauinv * S->particle_distributions[index] + S->tau_inv * feq;
-                
-            }
-        }
-    }
-}
-
-
-
 
 
 // cache optimised
