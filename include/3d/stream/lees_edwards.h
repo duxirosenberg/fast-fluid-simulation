@@ -17,8 +17,9 @@ void stream_lees_edwards_structural(struct LBMarrays* S, int time);
 
 void stream_lees_edwards_loop_order(struct LBMarrays* S, int time);
 
-
 void stream_lees_edwards_loop_copy(struct LBMarrays* S, int time);
+
+void stream_lees_edwards_avx(struct LBMarrays* S, int time);
 
 void stream_lees_edwards_arrays(int nX, int nY, int nZ, int direction_size, int time, double gamma_dot, double c_s,
                                 double* density_field,
@@ -62,6 +63,7 @@ static void register_stream_lees_edwards_functions() {
     add_stream_lees_edwards_struct_func(&stream_lees_edwards_structural, &stream_lees_edwards_flops_1, "Stream Lees Edwards - Structual Optimizations");
     add_stream_lees_edwards_struct_func(&stream_lees_edwards_loop_order, &stream_lees_edwards_flops_1, "Stream Lees Edwards - Loop Order");
     add_stream_lees_edwards_struct_func(&stream_lees_edwards_loop_copy, &stream_lees_edwards_flops_1, "Stream Lees Edwards - Memcpy");
+    add_stream_lees_edwards_struct_func(&stream_lees_edwards_avx, &stream_lees_edwards_flops_1, "Stream Lees Edwards - AVX");
 }
 
 #endif //CMDLINE_LBM_LEES_EDWARDS_H
