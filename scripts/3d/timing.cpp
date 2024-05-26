@@ -8,13 +8,13 @@
 
 using namespace std;
 
-#define CYCLES_REQUIRED 2e9
+#define CYCLES_REQUIRED 2e7
 #define C_S 0.6
 #define TAU 0.75
 #define GAMMA_DOT 0.01
 
 #define REP 10
-#define TIME_STEPS 1
+#define TIME_STEPS 10
 
 #define N_X 10
 #define N_Y 15
@@ -148,11 +148,21 @@ struct LBMarrays* init_struct(int direction_size, int boundary_condition) {
     }
     solver->density_field = (double*) malloc(box_flatten_length * sizeof(double));
     solver->velocity_field = (double*) malloc(3 * box_flatten_length * sizeof(double));
+    solver->velocity_fieldX = (double*) malloc(box_flatten_length * sizeof(double));
+    solver->velocity_fieldY = (double*) malloc(box_flatten_length * sizeof(double));
+    solver->velocity_fieldZ = (double*) malloc(box_flatten_length * sizeof(double));
     solver->previous_particle_distributions = (double*) malloc(distributions_flatten_length * sizeof(double));
     solver->particle_distributions = (double*) malloc(distributions_flatten_length * sizeof(double));
     solver->reverse_indexes = (int*) malloc(solver->direction_size * sizeof(int));
 
     initialize(solver->nX, solver->nY, solver->nZ, solver->direction_size, solver->density_field, solver->velocity_field, solver->previous_particle_distributions, solver->particle_distributions, solver->directions, solver->weights, solver->reverse_indexes);
+
+    for(int i = 0; i < box_flatten_length; i++) {
+        solver->velocity_fieldX[i] = solver->velocity_field[3 * i];
+        solver->velocity_fieldY[i] = solver->velocity_field[3 * i + 1];
+        solver->velocity_fieldZ[i] = solver->velocity_field[3 * i + 2];
+    }
+
     return solver;
 }
 
@@ -160,6 +170,9 @@ struct LBMarrays* init_struct(int direction_size, int boundary_condition) {
 void free_struct(LBMarrays* solver) {
     free(solver->density_field);
     free(solver->velocity_field);
+    free(solver->velocity_fieldX);
+    free(solver->velocity_fieldY);
+    free(solver->velocity_fieldZ);
     free(solver->previous_particle_distributions);
     free(solver->particle_distributions);
     free(solver->reverse_indexes);

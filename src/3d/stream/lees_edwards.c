@@ -603,12 +603,12 @@ void stream_lees_edwards_avx(struct LBMarrays* S, int time) {
     double cSqrtSqrtTwo = 2 * (cSqrt * cSqrt);
 
     __m256d vOne = _mm256_set_pd(1.0, 1.0, 1.0, 1.0);
-    __m256d vCSqrt = _mm256_set_pd(cSqrt, cSqrt, cSqrt, cSqrt);
-    __m256d vCSqrtTwo = _mm256_set_pd(cSqrtTwo, cSqrtTwo, cSqrtTwo, cSqrtTwo);
-    __m256d vCSqrtSqrtTwo = _mm256_set_pd(cSqrtSqrtTwo, cSqrtSqrtTwo, cSqrtSqrtTwo, cSqrtSqrtTwo);
+    __m256d vCSqrt = _mm256_div_pd(vOne, _mm256_set_pd(cSqrt, cSqrt, cSqrt, cSqrt));
+    __m256d vCSqrtTwo = _mm256_div_pd(vOne, _mm256_set_pd(cSqrtTwo, cSqrtTwo, cSqrtTwo, cSqrtTwo));
+    __m256d vCSqrtSqrtTwo = _mm256_div_pd(vOne, _mm256_set_pd(cSqrtSqrtTwo, cSqrtSqrtTwo, cSqrtSqrtTwo, cSqrtSqrtTwo));
 
-    double* feqValues = malloc(S->nX * sizeof (double));
-    double* feqUleValues = malloc(S->nX * sizeof (double));
+    double* feqValues = malloc((S->nX + 4) * sizeof (double));
+    double* feqUleValues = malloc((S->nX + 4) * sizeof (double));
 
     for (int i = 0; i < S->direction_size; i++) {
         int directionX = S->directions[3 * i ];
@@ -657,9 +657,9 @@ void stream_lees_edwards_avx(struct LBMarrays* S, int time) {
                     __m256d feq1 = _mm256_mul_pd(
                             vFactor,
                             _mm256_sub_pd(
-                                    _mm256_add_pd(vOne, _mm256_fmadd_pd(dot1, _mm256_div_pd(dot1, vCSqrtSqrtTwo), _mm256_div_pd(dot1, vCSqrt))),
-                                    _mm256_div_pd(norm1, vCSqrtTwo))
-                            );
+                                    _mm256_add_pd(vOne, _mm256_fmadd_pd(dot1, _mm256_mul_pd(dot1, vCSqrtSqrtTwo), _mm256_mul_pd(dot1, vCSqrt))),
+                                    _mm256_mul_pd(norm1, vCSqrtTwo))
+                    );
                     _mm256_storeu_pd(&feqUleValues[x], feq1);
 
                     __m256d norm2 = _mm256_fmadd_pd(vX, vX, normXY);
@@ -667,9 +667,9 @@ void stream_lees_edwards_avx(struct LBMarrays* S, int time) {
                     __m256d feq2 = _mm256_mul_pd(
                             vFactor,
                             _mm256_sub_pd(
-                                    _mm256_add_pd(vOne, _mm256_fmadd_pd(dot2, _mm256_div_pd(dot2, vCSqrtSqrtTwo), _mm256_div_pd(dot2, vCSqrt))),
-                                    _mm256_div_pd(norm2, vCSqrtTwo))
-                    );
+                                    _mm256_add_pd(vOne, _mm256_fmadd_pd(dot2, _mm256_mul_pd(dot2, vCSqrtSqrtTwo), _mm256_mul_pd(dot2, vCSqrt))),
+                                    _mm256_mul_pd(norm2, vCSqrtTwo))
+                            );
                     _mm256_storeu_pd(&feqValues[x], feq2);
                 }
 
