@@ -12,7 +12,7 @@ void stream_periodic_baseline(struct LBMarrays* S, int time);
 void stream_periodic_O1(struct LBMarrays* S, int time);
 void stream_periodic_O2(struct LBMarrays* S, int time);
 void stream_periodic_O3(struct LBMarrays* S, int time);
-
+void stream_periodic_memcpy(struct LBMarrays* S, int time);
 void stream_periodic_arrays(int nX, int nY, int nZ, int direction_size,
                             double* previous_particle_distributions,
                             double* particle_distributions,
@@ -64,11 +64,31 @@ static struct ops stream_periodic_O2_flops(struct LBMarrays* S) {
     return ops;
 }
 
+static struct ops stream_periodic_memcpy_flops(struct LBMarrays* S) {
+    long val = S->nX * S->nY * S->nZ* S->direction_size;
+    long iops;
+    if(S->direction_size == 27) {
+        iops = 13 + 6 * S->direction_size + 78 * S->nZ + 18 * S->nZ * (7 + 12 * S->nY);
+    } else if (S->direction_size == 15) {
+        iops = 13 + 6 * S->direction_size + 26 * S->nZ + 10 * S->nZ * (7 + 12 * S->nY);
+    } else {
+        iops = 1 + 6 * S->direction_size + 26 * S->nZ +  6 * S->nZ * (7 + 12 * S->nY);
+    }
+
+    struct ops ops = {
+            0,
+            iops,
+            val + 3 * S->direction_size,
+            val
+    };
+    return ops;
+}
+
+
 static void register_stream_periodic_functions() {
-    add_stream_periodic_array_func(&stream_periodic_arrays, &stream_periodic_baseline_flops, "Stream Periodic - Arrays Bl");
-    add_stream_periodic_struct_func(&stream_periodic_baseline, &stream_periodic_baseline_flops, "Stream Periodic - Structs Bl");
     add_stream_periodic_struct_func(&stream_periodic_O1, &stream_periodic_O1_flops, "Stream Periodic - O1 - precalc");
     add_stream_periodic_struct_func(&stream_periodic_O2, &stream_periodic_O2_flops, "Stream Periodic - O2 - loop reordering");
+    add_stream_periodic_struct_func(&stream_periodic_memcpy, &stream_periodic_memcpy_flops, "Stream Periodic - Memcopy");
     //add_stream_periodic_struct_func(&stream_periodic_O3, &stream_periodic_baseline_flops, "Stream Periodic - O3 - AVX");
     //add_stream_periodic_struct_func(&stream_periodic_ZYXI, &stream_periodic_baseline_flops, "Stream Periodic - ZYXI loop order");
     //add_stream_periodic_struct_func(&stream_periodic_O21, &stream_periodic_baseline_flops, "Stream Periodic - O21");

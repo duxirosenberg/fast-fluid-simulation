@@ -1,5 +1,5 @@
 #include "LBM.h"
-
+#include "string.h"
 //#include <immintrin.h>
 
 // Flops: 0
@@ -138,6 +138,81 @@ void stream_periodic_O2(struct LBMarrays* S) {
     }
 }
 
+void stream_periodic_memcpy(struct LBMarrays* S, int time) {
+    for (int i = 0; i < S->direction_size; i++) {
+        // 6 * d
+        int directionX = S->directions[3 * i];
+        int directionY = S->directions[3 * i + 1];
+        int directionZ = S->directions[3 * i + 2];
+        int distIndex = i * S->nXYZ;
+        // D3Q27: 13 iops
+        // D3Q15: 13 iops
+        // D2Q9: 1 iops
+        if(directionX == 0 && directionY == 0 && directionZ == 0) {
+            memcpy(&S->particle_distributions[distIndex], &S->previous_particle_distributions[distIndex], (sizeof(double)) * S->nXYZ);
+        } else if(directionX == 0 && directionY == 0 && directionZ == -1) {
+            memcpy(&S->particle_distributions[distIndex], &S->previous_particle_distributions[distIndex + S->nXY], (sizeof(double)) * (S->nXYZ - S->nXY));
+            memcpy(&S->particle_distributions[distIndex + S->nXYZ - S->nXY], &S->previous_particle_distributions[distIndex], (sizeof(double)) * S->nXY);
+        } else if(directionX == 0 && directionY == 0 && directionZ == 1) {
+            memcpy(&S->particle_distributions[distIndex + S->nXY], &S->previous_particle_distributions[distIndex], (sizeof(double)) * (S->nXYZ - S->nXY));
+            memcpy(&S->particle_distributions[distIndex], &S->previous_particle_distributions[distIndex + S->nXYZ - S->nXY], (sizeof(double)) * S->nXY);
+        } else if(directionX == 0 && directionY == -1) {
+            // D3Q27: z * 39 iops
+            // D3Q15: z * 13 iops
+            // D2Q9:  z * 13 iops
+            for (int z = 0; z < S->nZ; z++) {
+                int zmd = (S->nZ + z - directionY) % S->nZ;
+                int otherZIndex = zmd * S->nXY + distIndex;
+                int zIndex = z * S->nXY + distIndex;
+                memcpy(&S->particle_distributions[zIndex], &S->previous_particle_distributions[otherZIndex + S->nX], (sizeof(double)) * (S->nXY - S->nX));
+                memcpy(&S->particle_distributions[zIndex + S->nXY - S->nX], &S->previous_particle_distributions[otherZIndex], (sizeof(double)) * S->nX);
+            }
+        } else if(directionX == 0 && directionY == 1) {
+            // D3Q27: z * 39 iops
+            // D3Q15: z * 13 iops
+            // D2Q9:  z * 13 iops
+            for (int z = 0; z < S->nZ; z++) {
+                int zmd = (S->nZ + z - directionY) % S->nZ;
+                int otherZIndex = zmd * S->nXY + distIndex;
+                int zIndex = z * S->nXY + distIndex;
+                memcpy(&S->particle_distributions[zIndex + S->nX], &S->previous_particle_distributions[otherZIndex], (sizeof(double)) * (S->nXY - S->nX));
+                memcpy(&S->particle_distributions[zIndex], &S->previous_particle_distributions[otherZIndex + S->nXY - S->nX], (sizeof(double)) * S->nX);
+            }
+        } else if(directionX == -1) {
+            // D3Q27: 9 * z * (7 + 12 * y) iops
+            // D3Q15: 5 * z * (7 + 12 * y) iops
+            // D2Q9:  3 * z * (7 + 12 * y) iops
+            for (int z = 0; z < S->nZ; z++) {
+                int zmd = (S->nZ + z - directionY) % S->nZ;
+                int otherZIndex = zmd * S->nXY + distIndex;
+                int zIndex = z * S->nXY + distIndex;
+                for (int y = 0; y < S->nY; y++) {
+                    int ymd = (S->nY + y - directionY) % S->nY;
+                    int otherIndex = ymd * S->nX + otherZIndex;
+                    int index = y * S->nX + zIndex;
+                    memcpy(&S->particle_distributions[index], &S->previous_particle_distributions[otherIndex + 1], (sizeof(double)) * (S->nX - 1));
+                    S->particle_distributions[index + S->nX - 1] = S->previous_particle_distributions[otherIndex];
+                }
+            }
+        } else if(directionX == 1) {
+            // D3Q27: 9 * z * (7 + 12 * y) iops
+            // D3Q15: 5 * z * (7 + 12 * y) iops
+            // D2Q9:  3 * z * (7 + 12 * y) iops
+            for (int z = 0; z < S->nZ; z++) {
+                int zmd = (S->nZ + z - directionY) % S->nZ;
+                int otherZIndex = zmd * S->nXY + distIndex;
+                int zIndex = z * S->nXY + distIndex;
+                for (int y = 0; y < S->nY; y++) {
+                    int ymd = (S->nY + y - directionY) % S->nY;
+                    int otherIndex = ymd * S->nX + otherZIndex;
+                    int index = y * S->nX + zIndex;
+                    memcpy(&S->particle_distributions[index + 1], &S->previous_particle_distributions[otherIndex], (sizeof(double)) * (S->nX - 1));
+                    S->particle_distributions[index] = S->previous_particle_distributions[otherIndex + S->nX - 1];
+                }
+            }
+        }
+    }
+}
 
 
 
