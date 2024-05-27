@@ -15,7 +15,7 @@ void momentum_baseline(struct LBMarrays* S);
 void momentumO1(struct LBMarrays* S);
 void momentumO2(struct LBMarrays* S);
 void momentumO25(struct LBMarrays* S);
-
+void momentumO3(struct LBMarrays* S);
 
 //void momentumO21(struct LBMarrays* S);
 //void momentumO22(struct LBMarrays* S);
@@ -116,6 +116,7 @@ static void register_momentum_functions() {
     add_momentum_struct_func(&momentumO1, &momentum_O1_flops, "Momentum - 01 - precalculations and strength reduction"); //best in optimization step 1
     add_momentum_struct_func(&momentumO2, &momentum_O2_flops, "Momentum - 02 - best loop reorder etc"); 
     add_momentum_struct_func(&momentumO25, &momentum_O2_flops, "Momentum - 025 - best loop order w unrolling");
+    add_momentum_struct_func(&momentumO3, &momentum_baseline_flops, "Momentum - 03 - AVX");
 
 
     //add_momentum_array_func(&momentum_arraysO2, &momentum_baseline_flops, "Momentum - 02 arrays");
