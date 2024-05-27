@@ -360,7 +360,6 @@ void stream_lees_edwards_structural(struct LBMarrays* S, int time) {
 // writes: q * x * y * z doubles, 0 ints
 // Switched x to be the innermost loop, to match array layout
 void stream_lees_edwards_loop_order(struct LBMarrays* S, int time) {
-    // 9 flops
     double d_x = S->gamma_dot * (double)S->nY * (double)time;
     int d_x_I = (int) d_x;
     double d_x_R = d_x - (double)d_x_I;
@@ -589,7 +588,6 @@ void stream_lees_edwards_loop_copy(struct LBMarrays* S, int time) {
 }
 
 void stream_lees_edwards_avx(struct LBMarrays* S, int time) {
-    // 9 flops
     double d_x = S->gamma_dot * (double)S->nY * (double)time;
     int d_x_I = (int) d_x;
     double d_x_R = d_x - (double)d_x_I;
