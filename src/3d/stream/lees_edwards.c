@@ -371,9 +371,7 @@ void stream_lees_edwards_loop_order(struct LBMarrays* S, int time) {
     double cSqrt = S->c_s * S->c_s;
     double cSqrtTwo = 2 * cSqrt;
     double cSqrtSqrtTwo = 2 * (cSqrt * cSqrt);
-
-    double* feqValues = malloc(S->nX * sizeof (double));
-    double* feqUleValues = malloc(S->nX * sizeof (double));
+    double* gallileanTransform = malloc(S->nX * sizeof (double));
 
     for (int i = 0; i < S->direction_size; i++) {
         int directionX = S->directions[3 * i];
@@ -404,36 +402,25 @@ void stream_lees_edwards_loop_order(struct LBMarrays* S, int time) {
                     double velocityX = S->velocity_field[3 * index]; // 1 Flop
                     double velocityY = S->velocity_field[3 * index + 1];
                     double velocityZ = S->velocity_field[3 * index + 2];
-                    double normPosYZ = velocityY * velocityY + velocityZ * velocityZ;
-                    double dotPosYZ = velocityY * directionY + velocityZ * directionZ;
-                    double factorPos = weight * S->density_field[index];
-                    double velocityPosX1 = velocityX - directionY * u_le_x; // 1 Flop
-                    double dotPos1 = velocityPosX1 * directionX + dotPosYZ; // 5 Flops
-                    double normPos1 = velocityPosX1 * velocityPosX1 + normPosYZ; // 5 Flops
-                    feqUleValues[x] = factorPos * (1.0 + dotPos1 / cSqrt + dotPos1 * dotPos1 / cSqrtSqrtTwo - normPos1 / cSqrtTwo); // 16 Flops
-                    double dotPos2 = velocityX * directionX + dotPosYZ; // 5 Flops
-                    double normPos2 = velocityX * velocityX + normPosYZ; // 5 Flops
-                    feqValues[x] = factorPos * (1.0 + dotPos2 / cSqrt + dotPos2 * dotPos2 / cSqrtSqrtTwo - normPos2 / cSqrtTwo); // 16 Flops
+                    double normYZ = velocityY * velocityY + velocityZ * velocityZ;
+                    double dotYZ = velocityY * directionY + velocityZ * directionZ;
+                    double factor = weight * S->density_field[index];
+                    double velocityX1 = velocityX - directionY * u_le_x; // 1 Flop
+                    double dot1 = velocityX1 * directionX + dotYZ; // 5 Flops
+                    double norm1 = velocityX1 * velocityX1 + normYZ; // 5 Flops
+                    double feq1 = factor * (1.0 + dot1 / cSqrt + dot1 * dot1 / cSqrtSqrtTwo - norm1 / cSqrtTwo); // 16 Flops
+                    double dot2 = velocityX * directionX + dotYZ; // 5 Flops
+                    double norm2 = velocityX * velocityX + normYZ; // 5 Flops
+                    double feq2 = factor * (1.0 + dot2 / cSqrt + dot2 * dot2 / cSqrtSqrtTwo - norm2 / cSqrtTwo); // 16 Flops
+
+                    gallileanTransform[x] = S->previous_particle_distributions[index + distIndex] + feq1 - feq2;
                 }
 
                 for (int x = 0; x < S->nX; x++) {
                     int index = x + z * S->nXY + yDistIndex;
-                    // Bottom Wall.
-                    // Equation (17) from Less-Edwards boundary conditions for lattice Boltzmann suspension simulations
-                    // by Eric Lorenz and Alfons G. Hoekstra
-                    int x_pos = (x + directionY * d_x_I + xDimMinusDirection) % S->nX; // 5 Intops
-                    int x_shifted = (x + directionY * d_x_I + xDimMinusDirection + directionY) % S->nX; // 6 Intops
-
-                    // calculate_feq_u 1
-                    double feqPos1 = feqUleValues[x_pos]; // 16 Flops
-                    double feqPos2 = feqValues[x_pos]; // 16 Flops
-                    double galilean_transformation_pos = S->previous_particle_distributions[x_pos + yzIndex + distIndex] + feqPos1 - feqPos2;
-
-                    double feqShift1 = feqUleValues[x_shifted]; // 16 Flops
-                    double feqShift2 = feqValues[x_shifted]; // 16 Flops
-                    double galilean_transformation_shift = S->previous_particle_distributions[x_shifted + yzIndex + distIndex] + feqShift1 - feqShift2;
-                    // Equation (18) from the same paper.
-                    S->particle_distributions[index] = s_1 * galilean_transformation_shift + s_2 * galilean_transformation_pos; // 3 Flops
+                    int x_pos = (x + directionY * d_x_I + xDimMinusDirection) % S->nX;
+                    int x_shifted = (x + directionY * d_x_I + xDimMinusDirection + directionY) % S->nX;
+                    S->particle_distributions[index] = s_1 * gallileanTransform[x_shifted] + s_2 * gallileanTransform[x_pos]; // 3 Flops
                 }
             }
         }
@@ -469,8 +456,7 @@ void stream_lees_edwards_loop_copy(struct LBMarrays* S, int time) {
     double cSqrtTwo = 2 * cSqrt;
     double cSqrtSqrtTwo = 2 * (cSqrt * cSqrt);
 
-    double* feqValues = malloc(S->nX * sizeof (double));
-    double* feqUleValues = malloc(S->nX * sizeof (double));
+    double* gallileanTransform = malloc(S->nX * sizeof (double));
 
     for (int i = 0; i < S->direction_size; i++) {
         int directionX = S->directions[3 * i ];
@@ -501,36 +487,25 @@ void stream_lees_edwards_loop_copy(struct LBMarrays* S, int time) {
                     double velocityX = S->velocity_field[3 * index]; // 1 Flop
                     double velocityY = S->velocity_field[3 * index + 1];
                     double velocityZ = S->velocity_field[3 * index + 2];
-                    double normPosYZ = velocityY * velocityY + velocityZ * velocityZ;
-                    double dotPosYZ = velocityY * directionY + velocityZ * directionZ;
-                    double factorPos = weight * S->density_field[index];
-                    double velocityPosX1 = velocityX - directionY * u_le_x; // 1 Flop
-                    double dotPos1 = velocityPosX1 * directionX + dotPosYZ; // 5 Flops
-                    double normPos1 = velocityPosX1 * velocityPosX1 + normPosYZ; // 5 Flops
-                    feqUleValues[x] = factorPos * (1.0 + dotPos1 / cSqrt + dotPos1 * dotPos1 / cSqrtSqrtTwo - normPos1 / cSqrtTwo); // 16 Flops
-                    double dotPos2 = velocityX * directionX + dotPosYZ; // 5 Flops
-                    double normPos2 = velocityX * velocityX + normPosYZ; // 5 Flops
-                    feqValues[x] = factorPos * (1.0 + dotPos2 / cSqrt + dotPos2 * dotPos2 / cSqrtSqrtTwo - normPos2 / cSqrtTwo); // 16 Flops
+                    double normYZ = velocityY * velocityY + velocityZ * velocityZ;
+                    double dotYZ = velocityY * directionY + velocityZ * directionZ;
+                    double factor = weight * S->density_field[index];
+                    double velocityX1 = velocityX - directionY * u_le_x; // 1 Flop
+                    double dot1 = velocityX1 * directionX + dotYZ; // 5 Flops
+                    double norm1 = velocityX1 * velocityX1 + normYZ; // 5 Flops
+                    double feq1 = factor * (1.0 + dot1 / cSqrt + dot1 * dot1 / cSqrtSqrtTwo - norm1 / cSqrtTwo); // 16 Flops
+                    double dot2 = velocityX * directionX + dotYZ; // 5 Flops
+                    double norm2 = velocityX * velocityX + normYZ; // 5 Flops
+                    double feq2 = factor * (1.0 + dot2 / cSqrt + dot2 * dot2 / cSqrtSqrtTwo - norm2 / cSqrtTwo); // 16 Flops
+
+                    gallileanTransform[x] = S->previous_particle_distributions[index + distIndex] + feq1 - feq2;
                 }
 
                 for (int x = 0; x < S->nX; x++) {
                     int index = x + z * S->nXY + yDistIndex;
-                    // Bottom Wall.
-                    // Equation (17) from Less-Edwards boundary conditions for lattice Boltzmann suspension simulations
-                    // by Eric Lorenz and Alfons G. Hoekstra
-                    int x_pos = (x + directionY * d_x_I + xDimMinusDirection) % S->nX; // 5 Intops
-                    int x_shifted = (x + directionY * d_x_I + xDimMinusDirection + directionY) % S->nX; // 6 Intops
-
-                    // calculate_feq_u 1
-                    double feqPos1 = feqUleValues[x_pos]; // 16 Flops
-                    double feqPos2 = feqValues[x_pos]; // 16 Flops
-                    double galilean_transformation_pos = S->previous_particle_distributions[x_pos + yzIndex + distIndex] + feqPos1 - feqPos2;
-
-                    double feqShift1 = feqUleValues[x_shifted]; // 16 Flops
-                    double feqShift2 = feqValues[x_shifted]; // 16 Flops
-                    double galilean_transformation_shift = S->previous_particle_distributions[x_shifted + yzIndex + distIndex] + feqShift1 - feqShift2;
-                    // Equation (18) from the same paper.
-                    S->particle_distributions[index] = s_1 * galilean_transformation_shift + s_2 * galilean_transformation_pos; // 3 Flops
+                    int x_pos = (x + directionY * d_x_I + xDimMinusDirection) % S->nX;
+                    int x_shifted = (x + directionY * d_x_I + xDimMinusDirection + directionY) % S->nX;
+                    S->particle_distributions[index] = s_1 * gallileanTransform[x_shifted] + s_2 * gallileanTransform[x_pos]; // 3 Flops
                 }
             }
         }
@@ -600,13 +575,15 @@ void stream_lees_edwards_avx(struct LBMarrays* S, int time) {
     double cSqrtTwo = 2 * cSqrt;
     double cSqrtSqrtTwo = 2 * (cSqrt * cSqrt);
 
-    __m256d vOne = _mm256_set_pd(1.0, 1.0, 1.0, 1.0);
-    __m256d vCSqrt = _mm256_div_pd(vOne, _mm256_set_pd(cSqrt, cSqrt, cSqrt, cSqrt));
-    __m256d vCSqrtTwo = _mm256_div_pd(vOne, _mm256_set_pd(cSqrtTwo, cSqrtTwo, cSqrtTwo, cSqrtTwo));
-    __m256d vCSqrtSqrtTwo = _mm256_div_pd(vOne, _mm256_set_pd(cSqrtSqrtTwo, cSqrtSqrtTwo, cSqrtSqrtTwo, cSqrtSqrtTwo));
+    __m256d vS1 = _mm256_set1_pd(s_1);
+    __m256d vS2 = _mm256_set1_pd(s_2);
+    __m256d vOne = _mm256_set1_pd(1.0);
+    __m256d vUleX = _mm256_set1_pd(u_le_x);
+    __m256d vCSqrt = _mm256_div_pd(vOne, _mm256_set1_pd(cSqrt));
+    __m256d vCSqrtTwo = _mm256_div_pd(vOne, _mm256_set1_pd(cSqrtTwo));
+    __m256d vCSqrtSqrtTwo = _mm256_div_pd(vOne, _mm256_set1_pd(cSqrtSqrtTwo));
 
-    double* feqValues = malloc((S->nX + 4) * sizeof (double));
-    double* feqUleValues = malloc((S->nX + 4) * sizeof (double));
+    double* gallileanTransform = malloc(2 * (S->nX + 4) * sizeof (double));
 
     for (int i = 0; i < S->direction_size; i++) {
         int directionX = S->directions[3 * i ];
@@ -619,11 +596,12 @@ void stream_lees_edwards_avx(struct LBMarrays* S, int time) {
         if(directionY != 0) {
             double weight = S->weights[i];
             int xDimMinusDirection = 2 * S->nX - directionX;
-            __m256d vWeight = _mm256_set_pd(weight, weight, weight, weight);
-            __m256d vDirectionX = _mm256_set_pd(directionX, directionX, directionX, directionX);
-            __m256d vDirectionY = _mm256_set_pd(directionY, directionY, directionY, directionY);
-            __m256d vDirectionZ = _mm256_set_pd(directionZ, directionZ, directionZ, directionZ);
-            __m256d vUleX = _mm256_set_pd(u_le_x, u_le_x, u_le_x, u_le_x);
+            int x_pos = (directionY * d_x_I + xDimMinusDirection);
+            int x_shifted = (directionY * d_x_I + xDimMinusDirection + directionY);
+            __m256d vWeight = _mm256_set1_pd(weight);
+            __m256d vDirectionX = _mm256_set1_pd(directionX);
+            __m256d vDirectionY = _mm256_set1_pd(directionY);
+            __m256d vDirectionZ = _mm256_set1_pd(directionZ);
             int ymd = S->nY - 1;
             int yDistIndex;
             if(directionY == 1) {
@@ -639,56 +617,42 @@ void stream_lees_edwards_avx(struct LBMarrays* S, int time) {
 
                 for(int x = 0; x < S->nX; x += 4) {
                     int index = x + yzIndex;
-                    __m256d vDensity = _mm256_loadu_pd(&S->density_field[index]);
-                    __m256d vFactor = _mm256_mul_pd(vWeight, vDensity);
-
-                    __m256d vX = _mm256_loadu_pd(&S->velocity_fieldX[index]);
-                    __m256d vX1 = _mm256_fnmsub_pd(vDirectionY, vUleX, vX);
                     __m256d vY = _mm256_loadu_pd(&S->velocity_fieldY[index]);
                     __m256d vZ = _mm256_loadu_pd(&S->velocity_fieldZ[index]);
-
                     __m256d normXY = _mm256_fmadd_pd(vZ, vZ, _mm256_mul_pd(vY, vY));
                     __m256d dotXY = _mm256_fmadd_pd(vZ, vDirectionZ, _mm256_mul_pd(vY, vDirectionY));
 
+                    __m256d vX = _mm256_loadu_pd(&S->velocity_fieldX[index]);
+                    __m256d vX1 = _mm256_fnmsub_pd(vDirectionY, vUleX, vX);
                     __m256d norm1 = _mm256_fmadd_pd(vX1, vX1, normXY);
                     __m256d dot1 = _mm256_fmadd_pd(vX1, vDirectionX, dotXY);
+                    __m256d norm2 = _mm256_fmadd_pd(vX, vX, normXY);
+                    __m256d dot2 = _mm256_fmadd_pd(vX, vDirectionX, dotXY);
+                    __m256d vDensity = _mm256_loadu_pd(&S->density_field[index]);
+                    __m256d vFactor = _mm256_mul_pd(vWeight, vDensity);
                     __m256d feq1 = _mm256_mul_pd(
                             vFactor,
                             _mm256_sub_pd(
                                     _mm256_add_pd(vOne, _mm256_fmadd_pd(dot1, _mm256_mul_pd(dot1, vCSqrtSqrtTwo), _mm256_mul_pd(dot1, vCSqrt))),
                                     _mm256_mul_pd(norm1, vCSqrtTwo))
                     );
-                    _mm256_storeu_pd(&feqUleValues[x], feq1);
-
-                    __m256d norm2 = _mm256_fmadd_pd(vX, vX, normXY);
-                    __m256d dot2 = _mm256_fmadd_pd(vX, vDirectionX, dotXY);
                     __m256d feq2 = _mm256_mul_pd(
                             vFactor,
                             _mm256_sub_pd(
                                     _mm256_add_pd(vOne, _mm256_fmadd_pd(dot2, _mm256_mul_pd(dot2, vCSqrtSqrtTwo), _mm256_mul_pd(dot2, vCSqrt))),
                                     _mm256_mul_pd(norm2, vCSqrtTwo))
                             );
-                    _mm256_storeu_pd(&feqValues[x], feq2);
+                    __m256d galileanTransV = _mm256_sub_pd(_mm256_add_pd(_mm256_loadu_pd(&S->previous_particle_distributions[index + distIndex]), feq1), feq2);
+                    _mm256_storeu_pd(&gallileanTransform[x], galileanTransV);
                 }
-
-                for (int x = 0; x < S->nX; x++) {
-                    int index = x + z * S->nXY + yDistIndex;
-                    // Bottom Wall.
-                    // Equation (17) from Less-Edwards boundary conditions for lattice Boltzmann suspension simulations
-                    // by Eric Lorenz and Alfons G. Hoekstra
-                    int x_pos = (x + directionY * d_x_I + xDimMinusDirection) % S->nX; // 5 Intops
-                    int x_shifted = (x + directionY * d_x_I + xDimMinusDirection + directionY) % S->nX; // 6 Intops
-
-                    // calculate_feq_u 1
-                    double feqPos1 = feqUleValues[x_pos]; // 16 Flops
-                    double feqPos2 = feqValues[x_pos]; // 16 Flops
-                    double galilean_transformation_pos = S->previous_particle_distributions[x_pos + yzIndex + distIndex] + feqPos1 - feqPos2;
-
-                    double feqShift1 = feqUleValues[x_shifted]; // 16 Flops
-                    double feqShift2 = feqValues[x_shifted]; // 16 Flops
-                    double galilean_transformation_shift = S->previous_particle_distributions[x_shifted + yzIndex + distIndex] + feqShift1 - feqShift2;
-                    // Equation (18) from the same paper.
-                    S->particle_distributions[index] = s_1 * galilean_transformation_shift + s_2 * galilean_transformation_pos; // 3 Flops
+                _mm256_storeu_pd(&gallileanTransform[S->nX], _mm256_loadu_pd(&gallileanTransform[0]));
+                int index = z * S->nXY + yDistIndex;
+                int target = S->nX + z * S->nXY + yDistIndex;
+                for (; index < target; index+=4, x_pos+=4, x_shifted+=4) {
+                    __m256d transform1 = _mm256_loadu_pd(&gallileanTransform[x_shifted % S->nX]);
+                    __m256d transform2 = _mm256_loadu_pd(&gallileanTransform[x_pos % S->nX]);
+                    __m256d val = _mm256_fmadd_pd(vS1, transform1, _mm256_mul_pd(vS2, transform2));
+                    _mm256_storeu_pd(&S->particle_distributions[index], val);
                 }
             }
         }
@@ -743,6 +707,5 @@ void stream_lees_edwards_avx(struct LBMarrays* S, int time) {
             }
         }
     }
-    free(feqValues);
-    free(feqUleValues);
+    free(gallileanTransform);
 }
