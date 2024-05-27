@@ -12,7 +12,7 @@ struct LBMarrays{
     double* density_field;
     double* velocity_field;
     double* previous_particle_distributions;
-    double* particle_distributions;
+    double* particle_distributions; //size: q*nZ*nY*nX
     int* reverse_indexes;
     const int* directions;
     const double* weights;
