@@ -14,6 +14,7 @@ void stream_couette_baseline(struct LBMarrays* S);
 void stream_couette_code_motion(struct LBMarrays* S);
 void stream_couette_loop_structure(struct LBMarrays* S);
 void stream_couette_memcpy(struct LBMarrays* S);
+void stream_couette_avx(struct LBMarrays* S);
 
 void stream_couette_flattened(struct LBMarrays* S);
 void stream_couette_flattened_avx(struct LBMarrays* S);
@@ -82,14 +83,11 @@ static struct ops stream_couette_flattened_flops(struct LBMarrays* S) {
 
 
 static void register_stream_couette_functions() {
-    add_stream_couette_struct_func(&stream_couette_baseline, &stream_couette_baseline_flops, "Stream Couette - Structs Bl");
-    add_stream_couette_struct_func(&stream_couette_code_motion, &stream_couette_baseline_flops, "Stream Couette - Structs Code Motion");
-    add_stream_couette_struct_func(&stream_couette_loop_structure, &stream_couette_loop_structure_flops, "Stream Couette - Structs Loop Structure");
-    add_stream_couette_struct_func(&stream_couette_memcpy, &stream_couette_baseline_flops, "Stream Couette - Structs Memcpy");
+    add_stream_couette_struct_func(&stream_couette_code_motion, &stream_couette_baseline_flops, "Couette 1");
+    add_stream_couette_struct_func(&stream_couette_loop_structure, &stream_couette_loop_structure_flops, "Couette 2");
+    add_stream_couette_struct_func(&stream_couette_memcpy, &stream_couette_baseline_flops, "Couette 3");
+    add_stream_couette_struct_func(&stream_couette_avx, &stream_couette_baseline_flops, "Couette 4");
     
-    //add_stream_couette_struct_func(&stream_couette_flattened, &stream_couette_flattened_flops, "Stream Couette - Structs Loop Flattened");
-    //add_stream_couette_struct_func(&stream_couette_flattened_avx, &stream_couette_baseline_flops, "Stream Couette - Structs Loop Structure AVX");
-
     //add_stream_couette_struct_func(&stream_couette_loop_structure_avx, &stream_couette_baseline_flops, "Stream Couette - Structs Loop Structure AVX");
     //add_stream_couette_array_func(&stream_couette_arrays, &stream_couette_baseline_flops, "Stream Couette - Arrays Bl");
     //add_stream_couette_array_func(&stream_couette_arrays_opt1, &stream_couette_baseline_flops, "Stream Couette - Arrays Opt1: Code Motion and Index Pre-computation");

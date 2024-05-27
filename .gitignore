@@ -50,3 +50,5 @@ scripts/2d/py_baseline.csv
 scripts/2d/latticeboltzmann.png
 visualization/run.sh
 visualization/TimingData.csv
+visualization/TimingData.csv
+.gitignore
