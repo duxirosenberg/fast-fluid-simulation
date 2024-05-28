@@ -53,12 +53,13 @@ static struct ops stream_couette_baseline_flops(struct LBMarrays* S) {
 static struct ops stream_couette_codemotion_flops(struct LBMarrays* S) {
     long val = S->nX * S->nZ * S->direction_size;
     int q = S->direction_size;
-
+    long read = (long)((2 * q * (S->nXYZ) + 27) * sizeof(double) + (6 + 3 * q) * sizeof(int));
+    long written = (long)(q * S->nXYZ * sizeof(double));
     struct ops ops = {
         (long)(4 + q *(S->nZ * S->nX / 3.)), //flops
         (long)(q * (12*S->nXYZ+S->nXYZ-2*(S->nX*S->nZ*(1/3.)))), //iops
-        (long)(2*q*(S->nXYZ)+27)*sizeof(double)+(6+3*q)*sizeof(int), //bytes read
-        (long)(q*S->nXYZ)*sizeof(double) //bytes written
+        read,              
+        written //bytes written
     };
     return ops;
 }
@@ -66,11 +67,14 @@ static struct ops stream_couette_codemotion_flops(struct LBMarrays* S) {
 
 static struct ops stream_couette_loop_structure_flops(struct LBMarrays* S) {
     int q = S->direction_size;
+    long iops = q * (11 + S->nZ * (2 + S->nY * (1 + S->nX * ((7 / 3.) + 2))));
+    long read = (long) (2*q*(S->nXYZ)+q)*sizeof(double)+(4*q)*sizeof(int);
+    long written = (long) (q*S->nXYZ)*sizeof(double);
     struct ops ops = {
         (long)(4 + q *(2+ S->nZ * S->nX / 3.)), //flops
-        (long)(q * (11+ S->nZ*(2+ S->nY*(1+S->nX*((7/3.)+2))))), //iops
-        (long) (2*q*(S->nXYZ)+q)*sizeof(double)+(4*q)*sizeof(int), //bytes read
-        (long)(q*S->nXYZ)*sizeof(double) //bytes written
+        iops, //iops
+        read, //bytes read
+        written //bytes written
 
     };
     return ops;
@@ -81,7 +85,7 @@ static struct ops stream_couette_memcpy_flops(struct LBMarrays* S) {
     int q = S->direction_size;
     int nZX = S->nZ * S->nX;
     int nXYZ = S->nX * S->nY * S->nZ;
-    int nXY = S->nXY; int nZX = S->nZ*S->nX;
+    int nXY = S->nXY;
     int nX = S->nX;int nY = S->nY;int nZ = S->nZ;
     double t1;
     if(q==27){
@@ -90,11 +94,13 @@ static struct ops stream_couette_memcpy_flops(struct LBMarrays* S) {
         t1 = 1/15.;
     }
     int t2 = q*((2/3.)*nZX + (3./q)*nXYZ + 2*t1*nZ*(nXY-nX) + (nZ/3.)*(nY-1/3)*nX);
+    long read = (long) (1 +2*t2)*sizeof(double)+(10)*sizeof(int);
+    long written = (long) t2*sizeof(double);
     struct ops ops = {
         (long)(6 + q *(nZ * nX / 3)), //flops
         (long)(9 +q * ((1/3.)*nZ*6 + (1/3.)*(10+nX/2.) +4+4)), //iops
-        (long) (1 +2*t2)*sizeof(double)+(10)*sizeof(int), //bytes read
-        (long) t2*sizeof(double) //bytes written
+        read, //bytes read
+        written //bytes written
     };
     return ops;
 }
