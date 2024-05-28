@@ -42,3 +42,13 @@ main
 visualization/run.sh
 .gitignore
 visualization/TimingData.csv
+blaa/lessfsad.c
+blaa/per_oanf.c
+.gitignore
+scripts/2d/initial_conditions.csv
+scripts/2d/py_baseline.csv
+scripts/2d/latticeboltzmann.png
+visualization/run.sh
+visualization/TimingData.csv
+visualization/TimingData.csv
+.gitignore

@@ -21,9 +21,10 @@ RESET_DATAFILE=0
 # reset datafile ..
 ../build/timing 9 1 1 1 0 0 0 0 1
 #for NXYZ in 2 4 8 16 32 64;
-for NXYZ in 64 128;
+for NXYZ in  64 128;
 do
-    for DIR in 9 15 27
+    #for DIR in 9 15 27
+    for DIR in 27
     do 
         echo "currently doing $DIR and $NXYZ"
         ../build/timing $DIR $NXYZ $NXYZ $NXYZ $STREAM $MOMENTUM $COLLISON $LBM $RESET_DATAFILE
