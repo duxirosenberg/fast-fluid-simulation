@@ -110,13 +110,13 @@ static struct ops momentum_O21_flops(struct LBMarrays* S) {
 }
 
 static void register_momentum_functions() {
-    add_momentum_array_func(&momentum_arrays, &momentum_baseline_flops, "Momentum - Arrays Bl");
-    add_momentum_struct_func(&momentum_baseline, &momentum_baseline_flops, "Momentum - Structs Bl");
+    //add_momentum_array_func(&momentum_arrays, &momentum_baseline_flops, "Momentum - Arrays Bl");
+    add_momentum_struct_func(&momentum_baseline, &momentum_baseline_flops, "Momentum Baseline");
     
-    add_momentum_struct_func(&momentumO1, &momentum_O1_flops, "Momentum - 01 - precalculations and strength reduction"); //best in optimization step 1
-    add_momentum_struct_func(&momentumO2, &momentum_O2_flops, "Momentum - 02 - best loop reorder etc"); 
-    add_momentum_struct_func(&momentumO25, &momentum_O2_flops, "Momentum - 025 - best loop order w unrolling");
-    add_momentum_struct_func(&momentumO3, &momentum_baseline_flops, "Momentum - 03 - AVX");
+    add_momentum_struct_func(&momentumO1, &momentum_O1_flops, "Momentum 1"); //best in optimization step 1
+    //add_momentum_struct_func(&momentumO2, &momentum_O2_flops, "Momentum - 02 - best loop reorder etc"); 
+    add_momentum_struct_func(&momentumO25, &momentum_O2_flops, "Momentum 2");
+    add_momentum_struct_func(&momentumO3, &momentum_baseline_flops, "Momentum 4");
 
 
     //add_momentum_array_func(&momentum_arraysO2, &momentum_baseline_flops, "Momentum - 02 arrays");
