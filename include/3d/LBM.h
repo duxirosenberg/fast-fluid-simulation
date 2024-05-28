@@ -20,10 +20,7 @@ struct LBMarrays{
     const int* directions;
     const double* weights;
     double c_s;
-    double c_s2;
-    double c_s4;
     double tau;
-    double tau_inv;
     double gamma_dot;
     int boundary_condition;
 };

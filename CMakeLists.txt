@@ -3,9 +3,12 @@ project(LatticeBoltzmanMethod C CXX)
 
 # Set the compilers and the compiler flags
 set(CMAKE_C_COMPILER "gcc")
-set(CMAKE_C_FLAGS "-O3 -mavx2 -mfma")
+set(CMAKE_C_FLAGS   "-O3 -mavx2 -mfma -funroll-loops")
 set(CMAKE_CXX_COMPILER "g++")
-set(CMAKE_CXX_FLAGS "-O3 -mavx2 -mfma")
+set(CMAKE_CXX_FLAGS "-O3 -mavx2 -mfma -funroll-loops")
+# -fno-tree-vectorize
+
+
 set(CMAKE_CXX_STANDARD 11)
 
 # Include directories for JSON and CSV parsers (if still needed)
