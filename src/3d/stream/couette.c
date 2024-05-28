@@ -3,8 +3,12 @@
 #include <stddef.h>
 #include <string.h>
 
-// Flops: 5 * (nX * nZ * q / 3)
-// Intops: nX * nZ * q * (39 * nY + 32 / 3)
+
+
+/*BASELINE:
+Flops: 5 * (nX * nZ * q / 3)
+Intops: nX * nZ * q * (39 * nY + 32 / 3)
+*/
 void stream_couette_baseline(struct LBMarrays* S) {
     double c_s_square = S->c_s * S->c_s;
     for(int x = 0; x < S->nX; x++) {
@@ -35,9 +39,18 @@ void stream_couette_baseline(struct LBMarrays* S) {
 }
 
 
+/* OPTIMIZATION 1: CODE MOTION
 
-// Flops: 5 * (nX * nZ * q / 3)
-// Intops: nX * nZ * q * (39 * nY + 32 / 3)
+- I moved the calculation of as many constants out of the loop as possible without changing the loop order.
+- This optimization had a minimal effect on runtime, I suppose compiler does this well. 
+
+OP COUNTING: 
+IntOps: q* [ 12nXYZ + nXYZ-2(nX*nZ*(1/3))]
+Flops: 4 + q*(3*nXZ*(1/3))
+Doubles Read: 2*q*nXYZ + 27(for the weights)
+Ints Read: 6 + 3*q(directions)
+Doubles Written: q*nXYZ
+*/
 void stream_couette_code_motion(struct LBMarrays* S) {
     double c_s_square = S->c_s * S->c_s;
     double inv_c_s_square = 1.0 / c_s_square;  
@@ -50,25 +63,25 @@ void stream_couette_code_motion(struct LBMarrays* S) {
     int nXY = S->nXY;
     int nXYZ = S->nXYZ;
 
+
     for(int x = 0; x < nX; x++) {
         for (int y = 0; y < nY; y++) {
             for (int z = 0; z < nZ; z++) {
                 for (int i = 0; i < q; i++) {
-                    int index = x + y * nX + z * nXY + i * nXYZ; // 9 Intops
-                    int reverseIndex =  x + y * nX + z * nXY + S->reverse_indexes[i] * nXYZ; // 9 Intops
+                    int index = x + y * nX + z * nXY + i * nXYZ;                                // 6 Intops
+                    int reverseIndex =  x + y * nX + z * nXY + S->reverse_indexes[i] * nXYZ;    // 6 Intops
                     int xDirection = S->directions[3 * i];
                     int yDirection = S->directions[3 * i + 1];
                     int zDirection = S->directions[3 * i + 2];
-                    if (y == 0 && yDirection == 1) { // 0 Intops, 0 Flops (nX * nZ * direction_size / 3) times
-                        // Bottom Wall.
+                    if (y == 0 && yDirection == 1) {// Bottom Wal: (nXZ * q / 3) times
                         S->particle_distributions[index] = S->previous_particle_distributions[reverseIndex];
-                    } else if (y == nY - 1 && yDirection == -1) { // 4 Intops, 3 Flops (nX * nZ * direction_size / 3) times
+                    } else if (y == nY - 1 && yDirection == -1) { // 3 Flops (nXZ * q / 3) times
                         S->particle_distributions[index] = S->previous_particle_distributions[reverseIndex] + xDirection *  S->weights[i] * inv_c_s_square_u_max_times2;
-                    } else { // 16 Intops, 1 FP READ, 1 FP WRITE (nX * nZ * ((nY-2) + (4*direction_size / 3))) times
+                    } else { // 13 Intops nXYZ-2(nX*nZ*(1/3)q) times
                         int xmd = (nX + x - xDirection) % nX;
                         int ymd = y - yDirection;
                         int zmd = (nZ + z - zDirection) % nZ;
-                        int otherIndex = xmd + ymd * nX + zmd * nX * nY + i * nX * nY * nZ;
+                        int otherIndex = xmd + ymd * nX + zmd * nXY + i * nXYZ;
                         S->particle_distributions[index] = S->previous_particle_distributions[otherIndex];
                     }
                 }
@@ -78,14 +91,20 @@ void stream_couette_code_motion(struct LBMarrays* S) {
 }
 
 
-// Flops: 4 + q(2 + nZ*nX*(1*(1/3)))
-// Intops: q*(11+nZ*(2+nX* ((2/3 + 14/3)+(3/3+14/3))+((nY-2)*7))))
-// INTS READ: q*4
-// INTS Written: 0
-// FLOPS READ: q*(nZ*nY*NX + 1)
-// FLOPS WRITTEN: q(nZ*nY*NX)
-// Loop Unrolling: no effect, no reduction, no dependencies, compiler can do it
-// getting if/else outside of loop: seems to do worse, compiler does something smarter.  
+/*OPTIMIZATION 2: LOOP STRUCTURE
+
+- rearranged the loops in a smarter way, while keeping the logic the same
+- Loop unrolling had no effect. I think this is because there are no reductions or dependencies in the loop, 
+hence the compiler can do it perfeclty well, maybe even better.
+- taking the if/else out of the loop also had no effect, the compiler seems to do something smarter.
+
+OP COUNTING: 
+IntOps: q * (11 + [nZ*(2+ nY*(1 +nX( (1/3)*7 + 2)))] )
+Flops: 4 + q * (2 + nZ*nX*(1/3))
+Doubles Read: q * (1 + 2*nZ*nY*nX) 
+Ints Read: q * 4
+Doubles Written: q * nZ*nY*nX
+*/  
 void stream_couette_loop_structure(struct LBMarrays* S) {
     double c_s_square = S->c_s * S->c_s;                        //1 Flop
     double inv_c_s_square = 1.0 / c_s_square;                   //1 Flop
@@ -113,19 +132,26 @@ void stream_couette_loop_structure(struct LBMarrays* S) {
         int index = dir_nXYZ; 
         int reverseIndex = reverseIndex_nXYZ;
 
-        for(int z = 0; z < nZ; z++) {           //Inner Loops; nZ*(2+nX* ((2/3 + 14/3)+(3/3+14/3))+((nY-2)*7))) Intops, nZ*nX*(1*(1/3)) flops
+        /* OP COUNTING IN THE Below Loops: 
+
+        Intops: nZ*(2+ nY*(1 +nX( (1/3)*7 + 2)))
+        Flops: nZ*nY*NX*(1/3)
+        Doubles Read: 2*nZ*nY*nX
+        Doubles Written: nZ*nY*nX
+        */
+        for(int z = 0; z < nZ; z++) {           
             int zmd = (nZ_min_zDir + z ) % nZ;                  //2 Intop
             for (int y = 0; y < nY; y++) {                      
                 int ymd = y - yDirection;                       //1 Intop   
                 for (int x = 0; x < nX; x++) {
-                    if (y == 0 && yDirIS1) {                    //2 Intops   (yDIRIS1 is true in 1/3 of directions)
-                        S->particle_distributions[index] = S->previous_particle_distributions[reverseIndex];          // 1 FP READ, 1 FP WRITE
-                    } else if (y == nY - 1 && yDirISN1) {       // 3 Intops  (yDirISN1 is 1/3 in 1/3 of directions)
-                        S->particle_distributions[index] = S->previous_particle_distributions[reverseIndex] + temp; // 1 flop   // 1 FP READ, 1 FP WRITE
-                    } else {                                   
-                        int xmd = (nX_min_xDir + x ) % nX;      //2 Intops
-                        int otherIndex = xmd + ymd * nX + zmd * nXY + dir_nXYZ;     //5 Intops
-                        S->particle_distributions[index] = S->previous_particle_distributions[otherIndex];      // 1 FP READ, 1 FP WRITE
+                    if (y == 0 && yDirIS1) {                //(1/3)* 2 double reads, 1 double write                
+                        S->particle_distributions[index] = S->previous_particle_distributions[reverseIndex];         
+                    } else if (y == nY - 1 && yDirISN1) {   //(1/3)* 2 double reads, 1 double write, 1 flop
+                        S->particle_distributions[index] = S->previous_particle_distributions[reverseIndex] + temp; 
+                    } else {                                //(1/3) * 7 intops, 2 double read, 1 double write               
+                        int xmd = (nX_min_xDir + x ) % nX;      
+                        int otherIndex = xmd + ymd * nX + zmd * nXY + dir_nXYZ;    
+                        S->particle_distributions[index] = S->previous_particle_distributions[otherIndex];     
                     }
                     index++;                                     //1 Intop
                     reverseIndex++;                              //1 Intop
@@ -136,6 +162,14 @@ void stream_couette_loop_structure(struct LBMarrays* S) {
 }
 
 
+/*OPTIMIZATION 3: USING MEMCPY WHEREVER POSSIBLE
+
+IntOps: 9+ q * [(1/3) * (nZ*6 Intops) + (1/3)*(10+nX/2 Intops) + 4 + 4]
+Flops:  6 + q * [(1/3)*nZ*nX*Flops]
+Doubles Read: 1 + q *[2*(1/3)*nZ*nX + 2*(1/3)*nZ*nX + 6*(1/q)*nXYZ + 4 *(1/15)_or_(3/27)*nZ*(nXY-nX) + 2*(1/3)*nZ*(nY-(1/3))*nX]
+Ints Read: 10 
+Doubles Written: q * [(1/3)*nZ*nX + (1/3)*nZ*nX + 3*(1/q)*nXYZ + 2*(1/15)_or_(3/27)*nZ*(nXY-nX) + *(1/3)*nZ*(nY-(1/3))*nX]
+*/
 void stream_couette_memcpy(struct LBMarrays* S) {
     double c_s_square = S->c_s * S->c_s;                        //1 Flop
     double inv_c_s_square = 1.0 / c_s_square;                   //1 Flop
@@ -237,24 +271,32 @@ void stream_couette_memcpy(struct LBMarrays* S) {
 }
 
 
+/*OPTIMIZATION 4: USING AVX INSTRUCITONS
+
+IntOps: 9+ q * [(1/3) * (nZ*6 Intops) + (1/3)*(10+nX/2 Intops) + 4 + 4]
+Flops:  6 + q * [(1/3)*nZ*nX*Flops]
+Doubles Read: 1 + q *[2*(1/3)*nZ*nX + 2*(1/3)*nZ*nX + 6*(1/q)*nXYZ + 4 *(1/15)_or_(3/27)*nZ*(nXY-nX) + 2*(1/3)*nZ*(nY-(1/3))*nX]
+Ints Read: 10 
+Doubles Written: q * [(1/3)*nZ*nX + (1/3)*nZ*nX + 3*(1/q)*nXYZ + 2*(1/15)_or_(3/27)*nZ*(nXY-nX) + *(1/3)*nZ*(nY-(1/3))*nX]
+*/
 void stream_couette_avx(struct LBMarrays* S) {
     double c_s_square = S->c_s * S->c_s;                        //1 Flop
     double inv_c_s_square = 1.0 / c_s_square;                   //1 Flop
     double u_max = 0.1;  // Maximum velocity
     double inv_c_s_square_u_max_times2 = inv_c_s_square * 0.1*2; //2 Flops
-    int nX = S->nX;
-    int nY = S->nY;
-    int nZ = S->nZ;
-    int q = S->direction_size;
-    int nXY = S->nXY;
-    int nXYZ = S->nXYZ;
+    int nX = S->nX;                                              // Read 1 int
+    int nY = S->nY;                                              // Read 1 int
+    int nZ = S->nZ;                                              // Read 1 int
+    int q = S->direction_size;                                   // Read 1 int
+    int nXY = S->nXY;                                            // Read 1 int
+    int nXYZ = S->nXYZ;                                          // Read 1 int
 
     for(int i=0;i<q; i++){   //OUTER LOOP: q iterations
-        int xDirection = S->directions[3 * i];                  //1 Intop,      1 INT READ
-        int yDirection = S->directions[3 * i + 1];              //2 Intops,     1 INT READ
-        int zDirection = S->directions[3 * i + 2];              //2 Intops,     1 INT READ
-        double temp = xDirection * S->weights[i] * inv_c_s_square_u_max_times2; //2 Flops   1 FL READ
-        int reverseIndex_nXYZ = S->reverse_indexes[i] * nXYZ;   //1 Intops      1 INT READ
+        int xDirection = S->directions[3 * i];                  //1 Intop,      Read 1 int
+        int yDirection = S->directions[3 * i + 1];              //2 Intops,     Read 1 int
+        int zDirection = S->directions[3 * i + 2];              //2 Intops,     Read 1 int
+        double temp = xDirection * S->weights[i] * inv_c_s_square_u_max_times2; //2 Flops  Read 1 double
+        int reverseIndex_nXYZ = S->reverse_indexes[i] * nXYZ;   //1 Intops      Read 1 int
         int dirIndex = i * nXYZ;                                //1 Intop
         int nX_min_xDir = nX - xDirection;                      //1 Intops
         int nZ_min_zDir = nZ - zDirection;                      //1 Intops
@@ -262,44 +304,64 @@ void stream_couette_avx(struct LBMarrays* S) {
         int startY = 0;
         int endY = nY;
 
-        if(yDirection == 1){//Bottom Wall, 
+        /*
+        OPS COUNTING IN THE BELOW IF/ELSE BLOCKS:
+        Case yDir=1:    (1/3) * (nZ*6 Intops), 2*(1/3)*nZ*nX*sizeof(double) Bytes Read, (1/3)*nZ*nX*sizeof(double) Bytes Written
+        Case yDir=-1:   (1/3)*(10+nX/2 Intops),  (1/3)*nZ*nX*Flops,  2*(1/3)*nZ*nX*sizeof(double) Bytes Read,  (1/3)*nZ*nX*sizeof(double) Bytes Written
+        Case (0,0,0):   2*(1/q)*nXYZ*sizeof(double) Bytes Read, (1/q)*nXYZ*sizeof(double) Bytes Written
+        Case (0,0,-1):  2*(1/q)*nXYZ*sizeof(double) Bytes Read, (1/q)*nXYZ*sizeof(double) Bytes Written, (1/q)*4 Intops
+        Case (0,0,1):   2*(1/q)*nXYZ*sizeof(double) Bytes Read, (1/q)*nXYZ*sizeof(double) Bytes Written, (1/q)*4 Intops
+        Case (0,-1,*):   2*(1/15)_or_(3/27)*nZ*(nXY-nX)*sizeof(double) Bytes Read, (1/15)_or_(3/27)*nZ*(nXY-nX)* sizeof(double) Bytes Written, (1/15)_or_(3/27)*nZ*5 Intops
+        Case (0,1,*):    2*(1/15)_or_(3/27)*nZ*(nXY-nX)*sizeof(double) Bytes Read, (1/15)_or_(3/27)*nZ*(nXY-nX)* sizeof(double) Bytes Written, (1/15)_or_(3/27)*nZ*5 Intops
+        Case (-1,*,*):     (1/3)*nZ*(5+nY*5) Intops, 2*(1/3)*nZ*(nY-(1/3))*nX*sizeof(double) Bytes Read, (1/3)*nZ*(nY-(1/3))*nX*sizeof(double) Bytes Written
+        Case (1,*,*):      (1/3)*nZ*(5+nY*5) Intops, 2* (1/3)*nZ*(nY-(1/3))*nX*sizeof(double) Bytes Read, (1/3)*nZ*(nY-(1/3))*nX*sizeof(double) Bytes Written
+        
+        TOTAL:
+        IntOps: (1/3) * (nZ*6 Intops) + (1/3)*(10+nX/2 Intops) + 4 + 4
+        Flops:  (1/3)*nZ*nX*Flops
+        Doubles Read: 2*(1/3)*nZ*nX + 2*(1/3)*nZ*nX + 6*(1/q)*nXYZ + 4 *(1/15)_or_(3/27)*nZ*(nXY-nX) + 2*(1/3)*nZ*(nY-(1/3))*nX
+        Bytes Written: (1/3)*nZ*nX + (1/3)*nZ*nX + 3*(1/q)*nXYZ + 2*(1/15)_or_(3/27)*nZ*(nXY-nX) + *(1/3)*nZ*(nY-(1/3))*nX
+        */
+
+
+        if(yDirection == 1){//BOTTOM WALL,  
             //y=0
-            for(int z = 0; z < nZ; z++) {           //Inner Loops; nZ*(2+nX* ((2/3 + 14/3)+(3/3+14/3))+((nY-2)*7))) Intops, nZ*nX*(1*(1/3)) flops
-                int zmd = (nZ_min_zDir + z ) % nZ;                  //2 Intop
-                int index = z * nXY + dirIndex; // 9 Intops
-                int reverseIndex =  z * nXY + reverseIndex_nXYZ; // 9 Intops
+            for(int z = 0; z < nZ; z++) {          
+                int zmd = (nZ_min_zDir + z ) % nZ;                  
+                int index = z * nXY + dirIndex;                     
+                int reverseIndex =  z * nXY + reverseIndex_nXYZ;   
                 memcpy(&S->particle_distributions[index], &S->previous_particle_distributions[reverseIndex], nX * sizeof(double));
             }
             startY++;
-        }else if (yDirection == -1){//TOP Wall,
+        }else if (yDirection == -1){//TOP Wall, 
             //y=nY-1
-            for(int z = 0; z < nZ; z++) {           //Inner Loops; nZ*(2+nX* ((2/3 + 14/3)+(3/3+14/3))+((nY-2)*7))) Intops, nZ*nX*(1*(1/3)) flops
-                int zIndex = (nY-1) * nX + z * nXY + dirIndex;\
-                int zReverseIndex = (nY-1) * nX + z * nXY + reverseIndex_nXYZ;
+            for(int z = 0; z < nZ; z++) {      
+                int zIndex = (nY-1) * nX + z * nXY + dirIndex;                      
+                int zReverseIndex = (nY-1) * nX + z * nXY + reverseIndex_nXYZ;      
             
                 __m256 temp_vec = _mm256_set1_pd(temp); // Load temp into an AVX register
-                for(int x = 0; x < nX; x+=4) {
-                    int index = zIndex + x;
-                    int reverseIndex = zReverseIndex + x;
+                for(int x = 0; x < nX; x+=4) {                                      
+                    int index = zIndex + x;                                         
+                    int reverseIndex = zReverseIndex + x;                           
                     // Load 4 floats from previous_particle_distributions (reverseIndex until reverseIndex + 3) 
-                    __m256 prev_part_dist_vec = _mm256_loadu_pd(&S->previous_particle_distributions[reverseIndex]);
-                    __m256 result_vec = _mm256_add_pd(prev_part_dist_vec, temp_vec);
+                    __m256 prev_part_dist_vec = _mm256_loadu_pd(&S->previous_particle_distributions[reverseIndex]);    
+                    __m256 result_vec = _mm256_add_pd(prev_part_dist_vec, temp_vec);                                   
                     // Store the result back into particle_distributions
-                    _mm256_storeu_pd(&S->particle_distributions[index], result_vec);
+                    _mm256_storeu_pd(&S->particle_distributions[index], result_vec);                                   
                 }
             }
             endY--;
         }
         //other cases
-        if(xDirection == 0 && yDirection == 0 && zDirection == 0) {
+        if(xDirection == 0 && yDirection == 0 && zDirection == 0) {     
             memcpy(&S->particle_distributions[dirIndex], &S->previous_particle_distributions[dirIndex], (sizeof(double)) * nXYZ);
         }else if(xDirection == 0 && yDirection == 0 && zDirection == -1) {
             memcpy(&S->particle_distributions[dirIndex], &S->previous_particle_distributions[dirIndex + nXY], (sizeof(double)) * (nXYZ - nXY));
             memcpy(&S->particle_distributions[dirIndex + nXYZ - nXY], &S->previous_particle_distributions[dirIndex], (sizeof(double)) * nXY);
-        }else if(xDirection == 0 && yDirection == 0 && zDirection == 1) {
+        }else if(xDirection == 0 && yDirection == 0 && zDirection == 1) { 
             memcpy(&S->particle_distributions[dirIndex + S->nXY], &S->previous_particle_distributions[dirIndex], (sizeof(double)) * (nXYZ - nXY));
             memcpy(&S->particle_distributions[dirIndex], &S->previous_particle_distributions[dirIndex + nXYZ - nXY], (sizeof(double)) * nXY);
-        } else if(xDirection == 0 && yDirection == -1) {
+        } else if(xDirection == 0 && yDirection == -1) { 
             for (int z = 0; z < nZ; z++) {
                 int zmd = (nZ_min_zDir + z) % nZ;
                 int otherZIndex = zmd * nXY + dirIndex;
@@ -346,11 +408,17 @@ void stream_couette_avx(struct LBMarrays* S) {
 
 
 
+///////////////////////////////////////////////////////////////////
+//                   ARRAY VERSIONS                              //             
+//////////////////////////////////////////////////////////////////
 
 
 
-// Flops: 5 * (nX * nZ * q / 3)
-// Intops: nX * nZ * q * (39 * nY + 32 / 3)
+/*ARRAY BASELINE
+
+Flops: 5 * (nX * nZ * q / 3)
+Intops: nX * nZ * q * (39 * nY + 32 / 3)
+*/
 void stream_couette_arrays(int nX, int nY, int nZ, int direction_size, double c_s,
                                        double* previous_particle_distributions,
                                        double* particle_distributions,
