@@ -16,7 +16,7 @@ extern "C" {
 }
 
 // Constants
-#define tol 1e-6
+#define tol 1e-10
 
 
 static const int D2Q9_DIRECTIONS[] = { 1,0,0, 0,1,0, -1,0,0, 0,-1,0, 1,1,0, -1,1,0, -1,-1,0, 1,-1,0, 0,0,0};
@@ -105,8 +105,8 @@ void initialize(int nX, int nY, int nZ, int direction_size,
             for(int z = 0; z < nZ; z++) {
                 for(int i = 0; i < direction_size; i++) {
                     int index = x + y * nX + z * nX * nY + i * nX * nY * nZ;
-                    previous_particle_distributions[index] = weights[i];
-                    particle_distributions[index] = weights[i];
+                    previous_particle_distributions[index] = x+ weights[i];
+                    particle_distributions[index] = x+weights[i];
                 }
             }
         }
