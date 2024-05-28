@@ -145,12 +145,11 @@ static void register_collision_functions() {
     // add_collision_struct_func(&collision_baseline, &collision_baseline_flops, "Collision_0");  //baseline
     
  
-    add_collision_struct_func(&collision_AVX4_u2, &collision_flops_6,    "Collision_4"); 
-    add_collision_struct_func(&collision_SSA2,    &collision_flops_6,    "Collision_3");
-    add_collision_struct_func(&collision_6,       &collision_flops_6,    "Collision_2");
-    add_collision_struct_func(&collision_3,       &collision_flops_3,    "Collision_1");
-
-
+    // for intel skylake, these 4 are optimal 4 steps ..
+    // add_collision_struct_func(&collision_AVX4_u2, &collision_flops_6,    "Collision_4"); 
+    // add_collision_struct_func(&collision_SSA2,    &collision_flops_6,    "Collision_3");
+    // add_collision_struct_func(&collision_6,       &collision_flops_6,    "Collision_2");
+    // add_collision_struct_func(&collision_3,       &collision_flops_3,    "Collision_1");
 
 
 
@@ -158,24 +157,26 @@ static void register_collision_functions() {
 
     add_collision_struct_func(&collision_3,      &collision_flops_3, "Collision_3");  
     add_collision_struct_func(&collision_6,      &collision_flops_6, "Collision_6");
-    add_collision_struct_func(&collision_SSA,    &collision_flops_6, "Collision_SSA");
-    add_collision_struct_func(&collision_SSA_u,  &collision_flops_6, "Collision_SSA_u");
+
+    // check
     add_collision_struct_func(&collision_SSA2,   &collision_flops_6, "Collision_SSA2");
     add_collision_struct_func(&collision_SSA2_u, &collision_flops_6, "Collision_SSA2_u");
 
-    add_collision_struct_func(&collision_AVX,    &collision_flops_6, "Collision_AVX");
-    add_collision_struct_func(&collision_AVX_u,  &collision_flops_6, "Collision_AVX_u");
-    add_collision_struct_func(&collision_AVX_u2, &collision_flops_6, "Collision_AVX_u2");   
-    add_collision_struct_func(&collision_AVX2,   &collision_flops_6, "Collision_AVX2");
-    add_collision_struct_func(&collision_AVX3,   &collision_flops_6, "Collision_AVX3");
-    add_collision_struct_func(&collision_AVX3_u, &collision_flops_6, "Collision_AVX3_u"); 
-
+    // check
     add_collision_struct_func(&collision_AVX4,   &collision_flops_6, "Collision_AVX4"); 
     add_collision_struct_func(&collision_AVX4_u, &collision_flops_6, "Collision_AVX4_u");
     add_collision_struct_func(&collision_AVX4_u2,&collision_flops_6, "Collision_AVX4_u2"); 
     
 
-
+    //old data structure used unlikely to be better
+    // add_collision_struct_func(&collision_SSA,    &collision_flops_6, "Collision_SSA");
+    // add_collision_struct_func(&collision_SSA_u,  &collision_flops_6, "Collision_SSA_u");
+    // add_collision_struct_func(&collision_AVX,    &collision_flops_6, "Collision_AVX");
+    // add_collision_struct_func(&collision_AVX_u,  &collision_flops_6, "Collision_AVX_u");
+    // add_collision_struct_func(&collision_AVX_u2, &collision_flops_6, "Collision_AVX_u2");   
+    // add_collision_struct_func(&collision_AVX2,   &collision_flops_6, "Collision_AVX2");
+    // add_collision_struct_func(&collision_AVX3,   &collision_flops_6, "Collision_AVX3");
+    // add_collision_struct_func(&collision_AVX3_u, &collision_flops_6, "Collision_AVX3_u"); 
 
 
 }
