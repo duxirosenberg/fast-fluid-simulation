@@ -353,7 +353,7 @@ void collision_7(struct LBMarrays* S) {
 
 void collision_6(struct LBMarrays* S) {
     // const int iBB = 9;
-    const int nBB = 1024;
+    const int nBB = 512;
     const double omtauinv = 1.0 - S->tau_inv;
 
         // for(int ii = 0; ii < S->direction_size; ii+=iBB) {
