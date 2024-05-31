@@ -186,7 +186,6 @@ void stream_couette_memcpy(struct LBMarrays* S) {
         int xDirection = S->directions[3 * i];                  //1 Intop,      1 INT READ
         int yDirection = S->directions[3 * i + 1];              //2 Intops,     1 INT READ
         int zDirection = S->directions[3 * i + 2];              //2 Intops,     1 INT READ
-        double temp = xDirection * S->weights[i] * inv_c_s_square_u_max_times2; //2 Flops   1 FL READ
         int reverseIndex_nXYZ = S->reverse_indexes[i] * nXYZ;   //1 Intops      1 INT READ
         int dirIndex = i * nXYZ;                                //1 Intop
         int nX_min_xDir = nX - xDirection;                      //1 Intops
@@ -205,9 +204,10 @@ void stream_couette_memcpy(struct LBMarrays* S) {
             }
             startY++;
         }else if (yDirection == -1){//TOP Wall,
+            double temp = xDirection * S->weights[i] * inv_c_s_square_u_max_times2; //2 Flops   1 FL READ
             //y=nY-1
             for(int z = 0; z < nZ; z++) {           //Inner Loops; nZ*(2+nX* ((2/3 + 14/3)+(3/3+14/3))+((nY-2)*7))) Intops, nZ*nX*(1*(1/3)) flops
-                int zIndex = (nY-1) * nX + z * nXY + dirIndex;\
+                int zIndex = (nY-1) * nX + z * nXY + dirIndex;
                 int zReverseIndex = (nY-1) * nX + z * nXY + reverseIndex_nXYZ;
                 for(int x = 0; x < nX; x++) { 
                     int index = zIndex + x;
@@ -218,31 +218,31 @@ void stream_couette_memcpy(struct LBMarrays* S) {
             endY--;
         }
         //other cases
-        if(xDirection == 0 && yDirection == 0 && zDirection == 0) {
+        if (xDirection == 0 && yDirection == 0 && zDirection == 0) {
             memcpy(&S->particle_distributions[dirIndex], &S->previous_particle_distributions[dirIndex], (sizeof(double)) * nXYZ);
-        }else if(xDirection == 0 && yDirection == 0 && zDirection == -1) {
+        } else if (xDirection == 0 && yDirection == 0 && zDirection == -1) {
             memcpy(&S->particle_distributions[dirIndex], &S->previous_particle_distributions[dirIndex + nXY], (sizeof(double)) * (nXYZ - nXY));
             memcpy(&S->particle_distributions[dirIndex + nXYZ - nXY], &S->previous_particle_distributions[dirIndex], (sizeof(double)) * nXY);
-        }else if(xDirection == 0 && yDirection == 0 && zDirection == 1) {
-            memcpy(&S->particle_distributions[dirIndex + S->nXY], &S->previous_particle_distributions[dirIndex], (sizeof(double)) * (nXYZ - nXY));
+        } else if (xDirection == 0 && yDirection == 0 && zDirection == 1) {
+            memcpy(&S->particle_distributions[dirIndex + nXY], &S->previous_particle_distributions[dirIndex], (sizeof(double)) * (nXYZ - nXY));
             memcpy(&S->particle_distributions[dirIndex], &S->previous_particle_distributions[dirIndex + nXYZ - nXY], (sizeof(double)) * nXY);
-        } else if(xDirection == 0 && yDirection == -1) {
+        } else if (xDirection == 0 && yDirection == -1) {
             for (int z = 0; z < nZ; z++) {
                 int zmd = (nZ_min_zDir + z) % nZ;
                 int otherZIndex = zmd * nXY + dirIndex;
                 int zIndex = z * nXY + dirIndex;
                 memcpy(&S->particle_distributions[zIndex], &S->previous_particle_distributions[otherZIndex + nX], (sizeof(double)) * (nXY - nX));
             }
-        }else if(xDirection == 0 && yDirection == 1) {
+        } else if (xDirection == 0 && yDirection == 1) {
             for (int z = 0; z < nZ; z++) {
-                int zmd = (nZ_min_zDir + z) % nZ;
-                int index = dirIndex+nX; //+nX because first iteration has been done since yDIR==1
+                int zmd = (nZ + z - zDirection) % nZ;
                 int otherZIndex = zmd * nXY + dirIndex;
-                memcpy(&S->particle_distributions[index], &S->previous_particle_distributions[otherZIndex], (sizeof(double)) * (nXY - nX));
+                int zIndex = z * nXY + dirIndex;
+                memcpy(&S->particle_distributions[zIndex + nX], &S->previous_particle_distributions[otherZIndex], (sizeof(double)) * (nXY - nX));
             }
-        }else if(xDirection == -1) { 
+        } else if (xDirection == -1) {
             for (int z = 0; z < nZ; z++) {
-                int zmd = (nZ_min_zDir + z ) % nZ; 
+                int zmd = (nZ + z - zDirection) % nZ;
                 int otherZIndex = zmd * nXY + dirIndex;
                 int zIndex = z * nXY + dirIndex;
                 for (int y = startY; y < endY; y++) { 
@@ -253,17 +253,17 @@ void stream_couette_memcpy(struct LBMarrays* S) {
                     S->particle_distributions[index + nX - 1] = S->previous_particle_distributions[otherIndex];
                 }
             }
-        }else if(xDirection == 1) {
+        } else if (xDirection == 1) {
             for (int z = 0; z < nZ; z++) {
-                int zmd = (nZ_min_zDir + z) % nZ;
+                int zmd = (nZ + z - zDirection) % nZ;
                 int otherZIndex = zmd * nXY + dirIndex;
                 int zIndex = z * nXY + dirIndex;
                 for (int y = startY; y < endY; y++) {
                     int ymd = y - yDirection;
                     int otherIndex = ymd * nX + otherZIndex;
                     int index = y * nX + zIndex;
-                    S->particle_distributions[index] = S->previous_particle_distributions[otherIndex + nX - 1];
                     memcpy(&S->particle_distributions[index + 1], &S->previous_particle_distributions[otherIndex], (sizeof(double)) * (nX - 1));
+                    S->particle_distributions[index] = S->previous_particle_distributions[otherIndex + nX - 1];
                 }
             }
         }
@@ -339,13 +339,13 @@ void stream_couette_avx(struct LBMarrays* S) {
                 int zIndex = (nY-1) * nX + z * nXY + dirIndex;                      
                 int zReverseIndex = (nY-1) * nX + z * nXY + reverseIndex_nXYZ;      
             
-                __m256 temp_vec = _mm256_set1_pd(temp); // Load temp into an AVX register
+                __m256d temp_vec = _mm256_set1_pd(temp); // Load temp into an AVX register
                 for(int x = 0; x < nX; x+=4) {                                      
                     int index = zIndex + x;                                         
                     int reverseIndex = zReverseIndex + x;                           
                     // Load 4 floats from previous_particle_distributions (reverseIndex until reverseIndex + 3) 
-                    __m256 prev_part_dist_vec = _mm256_loadu_pd(&S->previous_particle_distributions[reverseIndex]);    
-                    __m256 result_vec = _mm256_add_pd(prev_part_dist_vec, temp_vec);                                   
+                    __m256d prev_part_dist_vec = _mm256_loadu_pd(&S->previous_particle_distributions[reverseIndex]);
+                    __m256d result_vec = _mm256_add_pd(prev_part_dist_vec, temp_vec);
                     // Store the result back into particle_distributions
                     _mm256_storeu_pd(&S->particle_distributions[index], result_vec);                                   
                 }
@@ -353,34 +353,34 @@ void stream_couette_avx(struct LBMarrays* S) {
             endY--;
         }
         //other cases
-        if(xDirection == 0 && yDirection == 0 && zDirection == 0) {     
+        if (xDirection == 0 && yDirection == 0 && zDirection == 0) {
             memcpy(&S->particle_distributions[dirIndex], &S->previous_particle_distributions[dirIndex], (sizeof(double)) * nXYZ);
-        }else if(xDirection == 0 && yDirection == 0 && zDirection == -1) {
+        } else if (xDirection == 0 && yDirection == 0 && zDirection == -1) {
             memcpy(&S->particle_distributions[dirIndex], &S->previous_particle_distributions[dirIndex + nXY], (sizeof(double)) * (nXYZ - nXY));
             memcpy(&S->particle_distributions[dirIndex + nXYZ - nXY], &S->previous_particle_distributions[dirIndex], (sizeof(double)) * nXY);
-        }else if(xDirection == 0 && yDirection == 0 && zDirection == 1) { 
-            memcpy(&S->particle_distributions[dirIndex + S->nXY], &S->previous_particle_distributions[dirIndex], (sizeof(double)) * (nXYZ - nXY));
+        } else if (xDirection == 0 && yDirection == 0 && zDirection == 1) {
+            memcpy(&S->particle_distributions[dirIndex + nXY], &S->previous_particle_distributions[dirIndex], (sizeof(double)) * (nXYZ - nXY));
             memcpy(&S->particle_distributions[dirIndex], &S->previous_particle_distributions[dirIndex + nXYZ - nXY], (sizeof(double)) * nXY);
-        } else if(xDirection == 0 && yDirection == -1) { 
+        } else if (xDirection == 0 && yDirection == -1) {
             for (int z = 0; z < nZ; z++) {
                 int zmd = (nZ_min_zDir + z) % nZ;
                 int otherZIndex = zmd * nXY + dirIndex;
                 int zIndex = z * nXY + dirIndex;
                 memcpy(&S->particle_distributions[zIndex], &S->previous_particle_distributions[otherZIndex + nX], (sizeof(double)) * (nXY - nX));
             }
-        }else if(xDirection == 0 && yDirection == 1) {
+        } else if (xDirection == 0 && yDirection == 1) {
             for (int z = 0; z < nZ; z++) {
-                int zmd = (nZ_min_zDir + z) % nZ;
-                int index = dirIndex+nX; //+nX because first iteration has been done since yDIR==1
-                int otherZIndex = zmd * nXY + dirIndex;
-                memcpy(&S->particle_distributions[index], &S->previous_particle_distributions[otherZIndex], (sizeof(double)) * (nXY - nX));
-            }
-        }else if(xDirection == -1) { 
-            for (int z = 0; z < nZ; z++) {
-                int zmd = (nZ_min_zDir + z ) % nZ; 
+                int zmd = (nZ + z - zDirection) % nZ;
                 int otherZIndex = zmd * nXY + dirIndex;
                 int zIndex = z * nXY + dirIndex;
-                for (int y = startY; y < endY; y++) { 
+                memcpy(&S->particle_distributions[zIndex + nX], &S->previous_particle_distributions[otherZIndex], (sizeof(double)) * (nXY - nX));
+            }
+        } else if (xDirection == -1) {
+            for (int z = 0; z < nZ; z++) {
+                int zmd = (nZ + z - zDirection) % nZ;
+                int otherZIndex = zmd * nXY + dirIndex;
+                int zIndex = z * nXY + dirIndex;
+                for (int y = startY; y < endY; y++) {
                     int ymd =  y - yDirection;
                     int otherIndex = ymd * nX + otherZIndex;
                     int index = y * nX + zIndex;
@@ -388,17 +388,17 @@ void stream_couette_avx(struct LBMarrays* S) {
                     S->particle_distributions[index + nX - 1] = S->previous_particle_distributions[otherIndex];
                 }
             }
-        }else if(xDirection == 1) {
+        } else if (xDirection == 1) {
             for (int z = 0; z < nZ; z++) {
-                int zmd = (nZ_min_zDir + z) % nZ;
+                int zmd = (nZ + z - zDirection) % nZ;
                 int otherZIndex = zmd * nXY + dirIndex;
                 int zIndex = z * nXY + dirIndex;
                 for (int y = startY; y < endY; y++) {
                     int ymd = y - yDirection;
                     int otherIndex = ymd * nX + otherZIndex;
                     int index = y * nX + zIndex;
-                    S->particle_distributions[index] = S->previous_particle_distributions[otherIndex + nX - 1];
                     memcpy(&S->particle_distributions[index + 1], &S->previous_particle_distributions[otherIndex], (sizeof(double)) * (nX - 1));
+                    S->particle_distributions[index] = S->previous_particle_distributions[otherIndex + nX - 1];
                 }
             }
         }
