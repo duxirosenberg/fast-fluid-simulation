@@ -167,7 +167,7 @@ void collision_2(struct LBMarrays* S) {
         const double half_cs4_inv = 0.5 / cs4;
         
         const double omtauinv = 1.0 - tau_inv;
-        const double half_cs2_inv = 0.5 * cs2_inv;;
+        const double half_cs2_inv = 0.5 * cs2_inv;
 
 
         for(int feqIndex = 0; feqIndex < S->nXYZ; ++feqIndex) {
@@ -200,81 +200,69 @@ void collision_2(struct LBMarrays* S) {
 
 
 void collision_3(struct LBMarrays* S) {
-
-        const double cs2 = S->c_s*S->c_s;
-        const double cs4 = cs2*cs2;
-        const double tau_inv =  1.0/S->tau;
-        const double omtauinv = 1.0 - tau_inv;
-        const double cs2_inv =  1.0 / cs2;
-        const double half_cs2_inv = 0.5 * cs2_inv;;
-        const double half_cs4_inv = 0.5 / cs4;
+    const double cs2 = S->c_s*S->c_s;
+    const double cs4 = cs2*cs2;
+    const double tau_inv =  1.0/S->tau;
+    const double omtauinv = 1.0 - tau_inv;
+    const double cs2_inv =  1.0 / cs2;
+    const double half_cs2_inv = 0.5 * cs2_inv;;
+    const double half_cs4_inv = 0.5 / cs4;
         
-            for(int i = 0; i < S->direction_size; i++) {
+    for(int i = 0; i < S->direction_size; i++) {
+        //  switched is half as fast for 8 and 32 ..
+        const double weight = S->weights[i];
+        const int directionX = S->directions[3 * i];
+        const int directionY = S->directions[3 * i + 1];
+        const int directionZ = S->directions[3 * i + 2];
 
-                //  switched is half as fast for 8 and 32 ..
-                    const double weight = S->weights[i];
-                    const int directionX = S->directions[3 * i];
-                    const int directionY = S->directions[3 * i + 1];
-                    const int directionZ = S->directions[3 * i + 2];
+        for(int feqIndex = 0; feqIndex < S->nXYZ; ++feqIndex) {
 
-                for(int feqIndex = 0; feqIndex < S->nXYZ; ++feqIndex) {
+            const int index = feqIndex + i * S->nXYZ;
+            const double velocityX = S->velocity_field[3 * feqIndex];
+            const double velocityY = S->velocity_field[3 * feqIndex + 1];
+            const double velocityZ = S->velocity_field[3 * feqIndex + 2];
 
-                    const int index = feqIndex + i * S->nXYZ;
-                    const double velocityX = S->velocity_field[3 * feqIndex];
-                    const double velocityY = S->velocity_field[3 * feqIndex + 1];
-                    const double velocityZ = S->velocity_field[3 * feqIndex + 2];
-
-                    const double norm_square = velocityX * velocityX + velocityY * velocityY + velocityZ * velocityZ;
-                    const double dot_product = velocityX * directionX + velocityY * directionY + velocityZ * directionZ;
+            const double norm_square = velocityX * velocityX + velocityY * velocityY + velocityZ * velocityZ;
+            const double dot_product = velocityX * directionX + velocityY * directionY + velocityZ * directionZ;
 
                     const double feq = 
                     weight * S->density_field[feqIndex] * (1.0 + dot_product* cs2_inv
                     + dot_product * dot_product * half_cs4_inv - norm_square * half_cs2_inv);
 
-                    S->previous_particle_distributions[index] = omtauinv * S->particle_distributions[index] + tau_inv * feq;
-                }
-            }
+            S->previous_particle_distributions[index] = omtauinv * S->particle_distributions[index] + tau_inv * feq;
+        }
+    }
 }
 
 
 
 void collision_6(struct LBMarrays* S) {
+    // const int iBB = 9;
+    const int nBB = BLOCKSIZE_COL > S->nXYZ ? S->nXYZ : BLOCKSIZE_COL;
+
+    const double cs2 = S->c_s*S->c_s;
+    const double cs4 = cs2*cs2;
+    const double tau_inv =  1.0/S->tau;
+    const double omtauinv = 1.0 - tau_inv;
+    const double cs2_inv =  1.0 / cs2;
+    const double half_cs2_inv = 0.5 * cs2_inv;;
+    const double half_cs4_inv = 0.5 / cs4;
+
+    for(int nxyz = 0; nxyz < S->nXYZ; nxyz+=nBB) {
+        for(int i = 0; i < S->direction_size; i++) {
+            const double weight = S->weights[i];
+            const int directionX = S->directions[3 * i];
+            const int directionY = S->directions[3 * i + 1];
+            const int directionZ = S->directions[3 * i + 2];
+
+            for(int feqIndex = nxyz; feqIndex < nxyz+nBB; ++feqIndex) {
+                const double velocityX = S->velocity_field[3 * feqIndex];
+                const double velocityY = S->velocity_field[3 * feqIndex + 1];
+                const double velocityZ = S->velocity_field[3 * feqIndex + 2];
 
 
-        //blocking for higher cache ..
-        // const int iBB = 9;
-        const int nBB = BLOCKSIZE_COL;
-
-        const double cs2 = S->c_s*S->c_s;
-        const double cs4 = cs2*cs2;
-        const double tau_inv =  1.0/S->tau;
-        const double omtauinv = 1.0 - tau_inv;
-        const double cs2_inv =  1.0 / cs2;
-        const double half_cs2_inv = 0.5 * cs2_inv;;
-        const double half_cs4_inv = 0.5 / cs4;
-        // for(int ii = 0; ii < S->direction_size; ii+=iBB) {
-                // for(int i = ii; i < ii+iBB; ++i) {
-
-
-
-        for(int nxyz = 0; nxyz < S->nXYZ; nxyz+=nBB) {
-            for(int i = 0; i < S->direction_size; i++) {
-                    const double weight = S->weights[i];
-                    const int directionX = S->directions[3 * i];
-                    const int directionY = S->directions[3 * i + 1];
-                    const int directionZ = S->directions[3 * i + 2];
-
-                for(int feqIndex = nxyz; feqIndex < nxyz+nBB; ++feqIndex) {
-
-
-
-                    const double velocityX = S->velocity_field[3 * feqIndex];
-                    const double velocityY = S->velocity_field[3 * feqIndex + 1];
-                    const double velocityZ = S->velocity_field[3 * feqIndex + 2];
-
-
-                    const double dot_product = velocityX * directionX + velocityY * directionY + velocityZ * directionZ;
-                    const double norm_square = velocityX * velocityX + velocityY * velocityY + velocityZ * velocityZ;
+                const double dot_product = velocityX * directionX + velocityY * directionY + velocityZ * directionZ;
+                const double norm_square = velocityX * velocityX + velocityY * velocityY + velocityZ * velocityZ;
 
                     const double feq = 
                     weight * S->density_field[feqIndex] * (1.0 + dot_product* cs2_inv
@@ -293,7 +281,7 @@ void collision_6(struct LBMarrays* S) {
 void collision_SSA(struct LBMarrays* S) {
 
 
-        const int nBB = BLOCKSIZE_COL;
+        const int nBB = BLOCKSIZE_COL > S->nXYZ ? S->nXYZ : BLOCKSIZE_COL;
         const double cs2 = S->c_s*S->c_s;
         const double cs4 = cs2*cs2;
         const double tau_inv =  1.0/S->tau;
@@ -347,61 +335,55 @@ void collision_SSA(struct LBMarrays* S) {
 
 
 void collision_SSA2(struct LBMarrays* S) {
+    const int nBB = BLOCKSIZE_COL > S->nXYZ ? S->nXYZ : BLOCKSIZE_COL;
+    const double cs2 = S->c_s*S->c_s;
+    const double cs4 = cs2*cs2;
+    const double tau_inv =  1.0/S->tau;
+    const double omtauinv = 1.0 - tau_inv;
+    const double cs2_inv =  1.0 / cs2;
+    const double half_cs2_inv = 0.5 * cs2_inv;
+    const double half_cs4_inv = 0.5 / cs4;
 
 
-        const int nBB = BLOCKSIZE_COL;
-        const double cs2 = S->c_s*S->c_s;
-        const double cs4 = cs2*cs2;
-        const double tau_inv =  1.0/S->tau;
-        const double omtauinv = 1.0 - tau_inv;
-        const double cs2_inv =  1.0 / cs2;
-        const double half_cs2_inv = 0.5 * cs2_inv;;
-        const double half_cs4_inv = 0.5 / cs4;
+    for(int nxyz = 0; nxyz < S->nXYZ; nxyz+=nBB) {
+        for(int i = 0; i < S->direction_size; i++) {
+            const double weight = S->weights[i];
+            const int directionX = S->directions[3 * i];
+            const int directionY = S->directions[3 * i + 1];
+            const int directionZ = S->directions[3 * i + 2];
+
+            for(int feqIndex = nxyz; feqIndex < nxyz+nBB; ++feqIndex) {
+                const int index = feqIndex + i * S->nXYZ;
+
+                const double velocityX = S->velocity_fieldX[feqIndex];
+                const double velocityY = S->velocity_fieldY[feqIndex];
+                const double velocityZ = S->velocity_fieldZ[feqIndex];
+
+                const double vdx = velocityX * directionX;
+                const double vdy = velocityY * directionY;
+                const double vdz = velocityZ * directionZ;
+                const double vdxy         = vdx + vdy ;
+                const double dot_product  = vdxy + vdz;
+
+                const double vvx = velocityX * velocityX;
+                const double vvy = velocityY * velocityY;
+                const double vvz = velocityZ * velocityZ;
+                const double vvxy         = vvx + vvy;
+                const double norm_square  = vvxy + vvz;
 
 
-        for(int nxyz = 0; nxyz < S->nXYZ; nxyz+=nBB) {
-            for(int i = 0; i < S->direction_size; i++) {
-                    const double weight = S->weights[i];
-                    const int directionX = S->directions[3 * i];
-                    const int directionY = S->directions[3 * i + 1];
-                    const int directionZ = S->directions[3 * i + 2];
-
-                for(int feqIndex = nxyz; feqIndex < nxyz+nBB; ++feqIndex) {
-
-                    
-                    const int index = feqIndex + i * S->nXYZ;                    
-
-                    const double velocityX = S->velocity_fieldX[feqIndex];
-                    const double velocityY = S->velocity_fieldY[feqIndex];
-                    const double velocityZ = S->velocity_fieldZ[feqIndex];
-
-                    const double vdx = velocityX * directionX;
-                    const double vdy = velocityY * directionY; 
-                    const double vdz = velocityZ * directionZ;
-                    const double vdxy         = vdx + vdy ;
-                    const double dot_product  = vdxy +vdz;
-
-                    const double vvx = velocityX * directionX;
-                    const double vvy = velocityY * directionY; 
-                    const double vvz = velocityZ * directionZ;
-                    const double vvxy         = vvx + vvy;
-                    const double norm_square  = vvxy +vvz;
-
-
-                    const double A      = weight * S->density_field[feqIndex];
-                    const double B      = dot_product * dot_product;
-                    const double C      = norm_square * half_cs2_inv;
-                    const double D      = dot_product*cs2_inv;
-                    const double E      = B *   half_cs4_inv;
-                    const double F      = 1.0 + D;
-                    const double G      = F +   E;
-                    const double H      = G -   C;
-                    const double feq    = A *   H;
-                    const double I      = tau_inv * feq;
-                    const double J      = omtauinv*S->particle_distributions[index];
-                    S->previous_particle_distributions[index] = I+J;
-
-                
+                const double A      = weight * S->density_field[feqIndex];
+                const double B      = dot_product * dot_product;
+                const double C      = norm_square * half_cs2_inv;
+                const double D      = dot_product*cs2_inv;
+                const double E      = B * half_cs4_inv;
+                const double F      = 1.0 + D;
+                const double G      = F +   E;
+                const double H      = G -   C;
+                const double feq    = A *   H;
+                const double I      = tau_inv * feq;
+                const double J      = omtauinv*S->particle_distributions[index];
+                S->previous_particle_distributions[index] = I+J;
             }
         }
     }
@@ -414,7 +396,7 @@ void collision_SSA2(struct LBMarrays* S) {
 void collision_SSA_u(struct LBMarrays* S) {
     
 
-        const int nBB = BLOCKSIZE_COL;
+        const int nBB = BLOCKSIZE_COL > S->nXYZ ? S->nXYZ : BLOCKSIZE_COL;
         const double cs2 = S->c_s*S->c_s;
         const double cs4 = cs2*cs2;
         const double tau_inv =  1.0/S->tau;
@@ -493,7 +475,7 @@ void collision_SSA_u(struct LBMarrays* S) {
 
 void collision_SSA2_u(struct LBMarrays* S) {
 
-        const int nBB = BLOCKSIZE_COL;
+        const int nBB = BLOCKSIZE_COL > S->nXYZ ? S->nXYZ : BLOCKSIZE_COL;
         const double cs2 = S->c_s*S->c_s;
         const double cs4 = cs2*cs2;
         const double tau_inv =  1.0/S->tau;
@@ -567,7 +549,7 @@ void collision_SSA2_u(struct LBMarrays* S) {
 void collision_AVX(struct LBMarrays* S) {
 
     // const int nBB = 1024;512
-    const int nBB = BLOCKSIZE_COL;
+    const int nBB = BLOCKSIZE_COL > S->nXYZ ? S->nXYZ : BLOCKSIZE_COL;
     const double tau_inv = 1/S->tau;
     const double cs2 = S->c_s*S->c_s;
     const double cs4 = cs2*cs2;
@@ -658,7 +640,7 @@ void collision_AVX(struct LBMarrays* S) {
 
 void collision_AVX_u(struct LBMarrays* S) {
     
-        const int nBB = BLOCKSIZE_COL;
+        const int nBB = BLOCKSIZE_COL > S->nXYZ ? S->nXYZ : BLOCKSIZE_COL;
 
         const double cs2 = S->c_s*S->c_s;
         const double cs4 = cs2*cs2;
@@ -807,7 +789,7 @@ void collision_AVX_u2(struct LBMarrays* S) {
 
 
     // const int nBB = 1024;512
-    const int nBB = BLOCKSIZE_COL;
+    const int nBB = BLOCKSIZE_COL > S->nXYZ ? S->nXYZ : BLOCKSIZE_COL;
     const double tau_inv = 1/S->tau;
     const double cs2 = S->c_s*S->c_s;
     const double cs4 = cs2*cs2;
@@ -1041,7 +1023,7 @@ void collision_AVX_u2(struct LBMarrays* S) {
 void collision_AVX2(struct LBMarrays* S) {
 
     // const int nBB = 1024;512
-    const int nBB = BLOCKSIZE_COL;
+    const int nBB = BLOCKSIZE_COL > S->nXYZ ? S->nXYZ : BLOCKSIZE_COL;
     const double tau_inv = 1/S->tau;
     const double cs2 = S->c_s*S->c_s;
     const double cs4 = cs2*cs2;
@@ -1158,7 +1140,7 @@ void collision_AVX2(struct LBMarrays* S) {
 void collision_AVX3(struct LBMarrays* S) {
 
     // const int nBB = 1024;512
-    const int nBB = BLOCKSIZE_COL;
+    const int nBB = BLOCKSIZE_COL > S->nXYZ ? S->nXYZ : BLOCKSIZE_COL;
     const double tau_inv = 1/S->tau;
     const double cs2 = S->c_s*S->c_s;
     const double cs4 = cs2*cs2;
@@ -1255,7 +1237,7 @@ void collision_AVX3(struct LBMarrays* S) {
 void collision_AVX3_u(struct LBMarrays* S) {
 
     // const int nBB = 1024;512
-    const int nBB = BLOCKSIZE_COL;
+    const int nBB = BLOCKSIZE_COL > S->nXYZ ? S->nXYZ : BLOCKSIZE_COL;
     const double tau_inv = 1/S->tau;
     const double cs2 = S->c_s*S->c_s;
     const double cs4 = cs2*cs2;
@@ -1394,7 +1376,7 @@ void collision_AVX3_u(struct LBMarrays* S) {
 void collision_AVX4(struct LBMarrays* S) {
 
     // const int nBB = 1024;512
-    const int nBB = BLOCKSIZE_COL;
+    const int nBB = BLOCKSIZE_COL > S->nXYZ ? S->nXYZ : BLOCKSIZE_COL;
     const double tau_inv = 1/S->tau;
     const double cs2 = S->c_s*S->c_s;
     const double cs4 = cs2*cs2;
@@ -1468,7 +1450,7 @@ void collision_AVX4(struct LBMarrays* S) {
 void collision_AVX4_u(struct LBMarrays* S) {
 
     // const int nBB = 1024;512
-    const int nBB = BLOCKSIZE_COL;
+    const int nBB = BLOCKSIZE_COL > S->nXYZ ? S->nXYZ : BLOCKSIZE_COL;
     const double tau_inv = 1/S->tau;
     const double cs2 = S->c_s*S->c_s;
     const double cs4 = cs2*cs2;
@@ -1568,7 +1550,7 @@ void collision_AVX4_u(struct LBMarrays* S) {
 
 void collision_AVX4_u2(struct LBMarrays* S) {
 
-    const int nBB = BLOCKSIZE_COL;
+    const int nBB = BLOCKSIZE_COL > S->nXYZ ? S->nXYZ : BLOCKSIZE_COL;
     const double tau_inv = 1/S->tau;
     const double cs2 = S->c_s*S->c_s;
     const double cs4 = cs2*cs2;
@@ -1620,7 +1602,7 @@ void collision_AVX4_u2(struct LBMarrays* S) {
                     __m256d d_velX = _mm256_loadu_pd(S->velocity_fieldX + d_feqIndex);
                     __m256d d_velY = _mm256_loadu_pd(S->velocity_fieldY + d_feqIndex);
                     __m256d d_velZ = _mm256_loadu_pd(S->velocity_fieldZ + d_feqIndex);
-                                                                                     
+
 
 
 
@@ -1674,34 +1656,38 @@ void collision_AVX4_u2(struct LBMarrays* S) {
 
                     __m256d tmpB          = _mm256_mul_pd(    df_pd,       tmpA);
                     __m256d tmpC          = _mm256_mul_pd(    omTAUinv_pd, PD_pd);
-                    __m256d A              = _mm256_fmadd_pd( dv_dot,      twoCS2inv_pd, ones_pd);
-                    __m256d B              = _mm256_fmsub_pd( dv_dot,      A,            v_norm);
-                    __m256d C              = _mm256_fmadd_pd( B,           twoCS2inv_pd, ones_pd);
-                    __m256d D              = _mm256_fmadd_pd( tmpB,        C,            tmpC);
+                    __m256d dotSqr        = _mm256_mul_pd(dv_dot, dv_dot);
+                    __m256d A             = _mm256_fmsub_pd( dotSqr,      CS2inv_pd, v_norm);
+                    __m256d B             = _mm256_fmadd_pd(dv_dot, CS2inv_pd, ones_pd);
+                    __m256d C             = _mm256_fmadd_pd(A, twoCS2inv_pd, B);
+                    __m256d D             = _mm256_fmadd_pd( tmpB,        C,            tmpC);
 
 
                     __m256d b_tmpB          = _mm256_mul_pd(    b_df_pd,       tmpA);
                     __m256d b_tmpC          = _mm256_mul_pd(    omTAUinv_pd,   b_PD_pd);
-                    __m256d b_A              = _mm256_fmadd_pd( b_dv_dot,      twoCS2inv_pd,   ones_pd);
-                    __m256d b_B              = _mm256_fmsub_pd( b_dv_dot,      b_A,            b_v_norm);
-                    __m256d b_C              = _mm256_fmadd_pd( b_B,           twoCS2inv_pd,   ones_pd);
-                    __m256d b_D              = _mm256_fmadd_pd( b_tmpB,        b_C,            b_tmpC);
+                    __m256d b_dotSqr        = _mm256_mul_pd(b_dv_dot, b_dv_dot);
+                    __m256d b_A             = _mm256_fmsub_pd( b_dotSqr,      CS2inv_pd, b_v_norm);
+                    __m256d b_B             = _mm256_fmadd_pd(b_dv_dot, CS2inv_pd, ones_pd);
+                    __m256d b_C             = _mm256_fmadd_pd(b_A, twoCS2inv_pd, b_B);
+                    __m256d b_D             = _mm256_fmadd_pd( b_tmpB,        b_C,            b_tmpC);
 
 
                     __m256d c_tmpB          = _mm256_mul_pd(    c_df_pd,       tmpA);
                     __m256d c_tmpC          = _mm256_mul_pd(    omTAUinv_pd,   c_PD_pd);
-                    __m256d c_A              = _mm256_fmadd_pd( c_dv_dot,      twoCS2inv_pd,   ones_pd);
-                    __m256d c_B              = _mm256_fmsub_pd( c_dv_dot,      c_A,            c_v_norm);
-                    __m256d c_C              = _mm256_fmadd_pd( c_B,           twoCS2inv_pd,   ones_pd);
-                    __m256d c_D              = _mm256_fmadd_pd( c_tmpB,        c_C,            c_tmpC);
+                    __m256d c_dotSqr        = _mm256_mul_pd(c_dv_dot, c_dv_dot);
+                    __m256d c_A             = _mm256_fmsub_pd( c_dotSqr,      CS2inv_pd, c_v_norm);
+                    __m256d c_B             = _mm256_fmadd_pd(c_dv_dot, CS2inv_pd, ones_pd);
+                    __m256d c_C             = _mm256_fmadd_pd(c_A, twoCS2inv_pd, c_B);
+                    __m256d c_D             = _mm256_fmadd_pd( c_tmpB,        c_C,            c_tmpC);
 
 
                     __m256d d_tmpB          = _mm256_mul_pd(    d_df_pd,       tmpA);
                     __m256d d_tmpC          = _mm256_mul_pd(    omTAUinv_pd,   d_PD_pd);
-                    __m256d d_A              = _mm256_fmadd_pd( d_dv_dot,      twoCS2inv_pd,   ones_pd);
-                    __m256d d_B              = _mm256_fmsub_pd( d_dv_dot,      d_A,            d_v_norm);
-                    __m256d d_C              = _mm256_fmadd_pd( d_B,           twoCS2inv_pd,   ones_pd);
-                    __m256d d_D              = _mm256_fmadd_pd( d_tmpB,        d_C,            d_tmpC);
+                    __m256d d_dotSqr        = _mm256_mul_pd(d_dv_dot, d_dv_dot);
+                    __m256d d_A             = _mm256_fmsub_pd( d_dotSqr,      CS2inv_pd, d_v_norm);
+                    __m256d d_B             = _mm256_fmadd_pd(d_dv_dot, CS2inv_pd, ones_pd);
+                    __m256d d_C             = _mm256_fmadd_pd(d_A, twoCS2inv_pd, d_B);
+                    __m256d d_D             = _mm256_fmadd_pd( d_tmpB,        d_C,            d_tmpC);
 
                     //////////////////
                     // STORE

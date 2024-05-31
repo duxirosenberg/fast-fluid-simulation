@@ -151,21 +151,17 @@ static void register_collision_functions() {
     // add_collision_struct_func(&collision_6,       &collision_flops_6,    "Collision_2");
     // add_collision_struct_func(&collision_3,       &collision_flops_3,    "Collision_1");
 
-
-
-
-
-    add_collision_struct_func(&collision_3,      &collision_flops_3, "Collision_3");  
-    add_collision_struct_func(&collision_6,      &collision_flops_6, "Collision_6");
+    add_collision_struct_func(&collision_3,      &collision_flops_3, "Collision 1");
+    add_collision_struct_func(&collision_6,      &collision_flops_6, "Collision 2");
 
     // check
-    add_collision_struct_func(&collision_SSA2,   &collision_flops_6, "Collision_SSA2");
-    add_collision_struct_func(&collision_SSA2_u, &collision_flops_6, "Collision_SSA2_u");
+    add_collision_struct_func(&collision_SSA2,   &collision_flops_6, "Collision 3");
+    //add_collision_struct_func(&collision_SSA2_u, &collision_flops_6, "Collision_SSA2_u");
 
     // check
-    add_collision_struct_func(&collision_AVX4,   &collision_flops_6, "Collision_AVX4"); 
-    add_collision_struct_func(&collision_AVX4_u, &collision_flops_6, "Collision_AVX4_u");
-    add_collision_struct_func(&collision_AVX4_u2,&collision_flops_6, "Collision_AVX4_u2"); 
+    //add_collision_struct_func(&collision_AVX4,   &collision_flops_6, "Collision_AVX4");
+    //add_collision_struct_func(&collision_AVX4_u, &collision_flops_6, "Collision_AVX4_u");
+    add_collision_struct_func(&collision_AVX4_u2, &collision_flops_6, "Collision 4");
     
 
     //old data structure used unlikely to be better
