@@ -8,7 +8,7 @@
 
 using namespace std;
 
-#define CYCLES_REQUIRED 2e7
+#define CYCLES_REQUIRED 1e8
 #define C_S 0.6
 #define TAU 0.75
 #define GAMMA_DOT 0.01
@@ -51,7 +51,7 @@ public:
 
 template <typename T>
 double time_function(FuncEntry<T> f) {
-    long num_runs = 10;
+    long num_runs = 1;
     double multiplier = 1;
     myInt64 time;
     // Warm-up phase: we determine a number of executions that allows
@@ -89,7 +89,7 @@ int check_equality(LBMarrays* solver1, LBMarrays* solver2) {
     int eqPD = equal(solver1->particle_distributions, solver2->particle_distributions, nX * nY * nZ * direction_size);
     int eqPPD = equal(solver1->previous_particle_distributions, solver2->previous_particle_distributions, nX * nY * nZ * direction_size);
     int eqDF = equal(solver1->density_field, solver2->density_field, nX * nY * nZ);
-    int eqVF = equal(solver1->velocity_field, solver2->velocity_field, nX * nY * nZ);
+    int eqVF = equalVelocity(solver1, solver2);
 
     if(!eqPD || !eqPPD || !eqDF || !eqVF) {
         if (eqPD) {
@@ -421,6 +421,7 @@ void step(int num, int max, std::ofstream& fos, const char* name, FuncEntry<T> b
                    baselineOps.flops  << "," <<
                    baselineOps.bytes_read  << "," <<
                    baselineOps.bytes_write  << "," <<
+                   name << "," <<
                    baseline.funcName               << "," <<
                    cycles                          << "," <<
                    example->direction_size         << "," <<
@@ -440,6 +441,7 @@ void step(int num, int max, std::ofstream& fos, const char* name, FuncEntry<T> b
                        ops.flops  << "," <<
                        ops.bytes_read  << "," <<
                        ops.bytes_write  << "," <<
+                       name << "," <<
                        structFuncs[i].funcName << "," <<
                        cycles                  << "," <<
                        example->direction_size << "," <<
@@ -460,6 +462,7 @@ void step(int num, int max, std::ofstream& fos, const char* name, FuncEntry<T> b
                        ops.flops  << "," <<
                        ops.bytes_read  << "," <<
                        ops.bytes_write  << "," <<
+                       name << "," <<
                        arrayFuncs[i].funcName  << "," <<
                        cycles                  << "," <<
                        example->direction_size << "," <<
@@ -539,8 +542,6 @@ int main(int argc, char* argv[]) {
     NY_g = N_Y;
     NZ_g = N_Z;
     DIRECTIONS_TYPE_g = DIRECTIONS_TYPE_DEFAULT;
-    BOUNDARY_CONDITION_g = 3;
-
     switch(argc-1){
         // case 5:
         //     BOUNDARY_CONDITION_g = std::stoi(argv[3]);
@@ -579,34 +580,39 @@ int main(int argc, char* argv[]) {
 
     if(reset_datafile) {
         fos.open(filename, std::ofstream::out);
-        fos << "iops,flops,bytes_read,bytes_write,function,cycles,DIRECTION_SIZE,NX,NY,NZ,TIMESTEPS,bytes" << std::endl;
+        fos << "iops,flops,bytes_read,bytes_write,step,function,cycles,DIRECTION_SIZE,NX,NY,NZ,TIMESTEPS,bytes" << std::endl;
     } else {
         fos.open(filename, std::ofstream::out | std::ofstream::app);
     }
 
     if(test_momentum) {
         auto momentumBaseline = FuncEntry<comp_func_struct>(&momentum_baseline, &run_func_struct, &time_func_struct, "Momentum Baseline", &momentum_baseline_flops);
-        step(1, 6, fos, "Momentum", momentumBaseline, momentumFuncsStruct, momentumFuncsArrays);
+        step(1, 8, fos, "Momentum", momentumBaseline, momentumFuncsStruct, momentumFuncsArrays);
     }
     if(test_collision) {
         auto collisionBaseline = FuncEntry<comp_func_struct>(&collision_baseline, &run_func_struct, &time_func_struct, "Collision Baseline", &collision_baseline_flops);
-        step(2, 6, fos, "Collision", collisionBaseline, collisionFuncsStruct, collisionFuncsArrays);
+        step(2, 8, fos, "Collision", collisionBaseline, collisionFuncsStruct, collisionFuncsArrays);
     }
     if(test_stream == 1 || test_stream == 4) {
         auto streamPeriodicBaseline = FuncEntry<comp_func_struct_time>(&stream_periodic_baseline, &run_func_struct_time, &time_func_struct_time, "Stream Periodic Baseline", &stream_periodic_baseline_flops);
-        step(3, 6, fos, "Stream Periodic", streamPeriodicBaseline, streamPeriodicFuncsStruct, streamPeriodicFuncsArrays);
+        step(3, 8, fos, "Stream Periodic", streamPeriodicBaseline, streamPeriodicFuncsStruct, streamPeriodicFuncsArrays);
     }
     if(test_stream == 2 || test_stream == 4) {
         auto streamCouetteBaseline = FuncEntry<comp_func_struct>(&stream_couette_baseline, &run_func_struct, &time_func_struct, "Stream Couette Baseline", &stream_couette_baseline_flops);
-        step(4, 6, fos, "Stream Couette", streamCouetteBaseline, streamCouetteFuncsStruct, streamCouetteFuncsArrays);
+        step(4, 8, fos, "Stream Couette", streamCouetteBaseline, streamCouetteFuncsStruct, streamCouetteFuncsArrays);
     }
     if(test_stream == 3 || test_stream == 4) {
         auto streamLeesEdwardsBaseline = FuncEntry<comp_func_struct_time>(&stream_lees_edwards_baseline, &run_func_struct_time, &time_func_struct_time, "Stream Lees Edwards Baseline", &stream_lees_edwards_baseline_flops);
-        step(5, 6, fos, "Stream Less Edwards", streamLeesEdwardsBaseline, streamLeesEdwardsFuncsStruct, streamLeesEdwardsFuncsArrays);
+        step(5, 8, fos, "Stream Less Edwards", streamLeesEdwardsBaseline, streamLeesEdwardsFuncsStruct, streamLeesEdwardsFuncsArrays);
     }
     if(test_LBM){
         auto lbmBaseline = FuncEntry<comp_func_struct_time>(&perform_timestep_baseline, &run_func_struct_time, &time_func_struct_time, "LBM Baseline", &perform_timestep_baseline_flops);
-        step(6, 6, fos, "LBM", lbmBaseline, lbmFuncsStruct, lbmFuncsArrays);
+        BOUNDARY_CONDITION_g = 1;
+        step(6, 8, fos, "LBM - Periodic Boundary Condition", lbmBaseline, lbmFuncsStruct, lbmFuncsArrays);
+        BOUNDARY_CONDITION_g = 2;
+        step(7, 8, fos, "LBM - Couette Boundary Condition", lbmBaseline, lbmFuncsStruct, lbmFuncsArrays);
+        BOUNDARY_CONDITION_g = 3;
+        step(8, 8, fos, "LBM - Lees Edwards Boundary Condition", lbmBaseline, lbmFuncsStruct, lbmFuncsArrays);
     }
 
     cout << "Program finished." << endl << endl;
