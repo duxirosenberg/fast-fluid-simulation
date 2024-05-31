@@ -102,10 +102,10 @@ static struct ops stream_lees_edwards_flops_3(struct LBMarrays* S) {
     return ops;
 }
 static void register_stream_lees_edwards_functions() {
-    add_stream_lees_edwards_struct_func(&stream_lees_edwards_structural, &stream_lees_edwards_flops_1, "Stream Lees Edwards - Structual Optimizations");
-    add_stream_lees_edwards_struct_func(&stream_lees_edwards_loop_order, &stream_lees_edwards_flops_2, "Stream Lees Edwards - Loop Order");
-    add_stream_lees_edwards_struct_func(&stream_lees_edwards_loop_copy, &stream_lees_edwards_flops_3, "Stream Lees Edwards - Memcpy");
-    add_stream_lees_edwards_struct_func(&stream_lees_edwards_avx, &stream_lees_edwards_flops_3, "Stream Lees Edwards - AVX");
+    add_stream_lees_edwards_struct_func(&stream_lees_edwards_structural, &stream_lees_edwards_flops_1, "Lees Edwards - 1");
+    add_stream_lees_edwards_struct_func(&stream_lees_edwards_loop_order, &stream_lees_edwards_flops_2, "Lees Edwards - 2");
+    add_stream_lees_edwards_struct_func(&stream_lees_edwards_loop_copy, &stream_lees_edwards_flops_3, "Lees Edwards - 3");
+    add_stream_lees_edwards_struct_func(&stream_lees_edwards_avx, &stream_lees_edwards_flops_3, "Lees Edwards - 4");
 }
 
 #endif //CMDLINE_LBM_LEES_EDWARDS_H
