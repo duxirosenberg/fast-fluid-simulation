@@ -54,7 +54,7 @@ static struct ops perform_timestep_baseline_flops(struct LBMarrays* S) {
 
 static struct ops perform_timestep_1_flops(struct LBMarrays* S) {
     long val = S->nX * S->nY * S->nZ;
-    struct ops collisionOps = collision_flops_3(S);
+    struct ops collisionOps = collision_flops_2(S);
     struct ops momentumOps = momentum_O1_flops(S);
     struct ops streamOps;
 
@@ -78,7 +78,7 @@ static struct ops perform_timestep_1_flops(struct LBMarrays* S) {
 
 static struct ops perform_timestep_2_flops(struct LBMarrays* S) {
     long val = S->nX * S->nY * S->nZ;
-    struct ops collisionOps = collision_flops_6(S);
+    struct ops collisionOps = collision_flops_nb(S);
     struct ops momentumOps = momentum_O2_flops(S);
     struct ops streamOps;
 
@@ -102,7 +102,7 @@ static struct ops perform_timestep_2_flops(struct LBMarrays* S) {
 
 static struct ops perform_timestep_3_flops(struct LBMarrays* S) {
     long val = S->nX * S->nY * S->nZ;
-    struct ops collisionOps = collision_flops_6(S);
+    struct ops collisionOps = collision_flops_nb(S);
     struct ops momentumOps = momentum_O2_flops(S);
     struct ops streamOps;
 
@@ -126,7 +126,7 @@ static struct ops perform_timestep_3_flops(struct LBMarrays* S) {
 
 static struct ops perform_timestep_4_flops(struct LBMarrays* S) {
     long val = S->nX * S->nY * S->nZ;
-    struct ops collisionOps = collision_flops_6(S);
+    struct ops collisionOps = collision_flops_nb(S);
     struct ops momentumOps = momentum_O2_flops(S);
     struct ops streamOps;
 
