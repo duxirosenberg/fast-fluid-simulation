@@ -37,11 +37,10 @@ void collision_1(struct LBMarrays* S);
 // avoid division
 void collision_2(struct LBMarrays* S);
 
-
+// removed acces to previous particle distributiions for increasing operational 
+// intenity, without increasing flops
 // reorder loops to the better memory dynamic variant
 void collision_3(struct LBMarrays* S);
-
-
 // cache optimized by blocking of loops 
 // will only help for sufficiently large grids 
 // (when the double Gridsize 2xN^3 doesnt fit into cache ... (usually at 32 or 64)
@@ -60,6 +59,10 @@ void collision_SSA2(struct LBMarrays* S);
 // unrolled once (worse)
 void collision_SSA2_u(struct LBMarrays* S); 
 
+
+
+void collision_SSA3(struct LBMarrays* S); 
+void collision_SSA3_nb(struct LBMarrays* S); 
 
 
 // AVX2 VECTORISATION:
@@ -82,6 +85,11 @@ void collision_AVX3_u(struct LBMarrays* S);
 void collision_AVX4(struct LBMarrays* S);
 void collision_AVX4_u(struct LBMarrays* S);
 void collision_AVX4_u2(struct LBMarrays* S);
+
+void collision_AVX5_u2(struct LBMarrays* S);
+void collision_AVX5_u2_nb(struct LBMarrays* S);
+
+
 
 
 // reordering seems to usually worsen, compiler seems to handle current
@@ -151,28 +159,27 @@ static void register_collision_functions() {
     // add_collision_struct_func(&collision_6,       &collision_flops_6,    "Collision_2");
     // add_collision_struct_func(&collision_3,       &collision_flops_3,    "Collision_1");
 
-    add_collision_struct_func(&collision_3,      &collision_flops_3, "Collision 1");
-    add_collision_struct_func(&collision_6,      &collision_flops_6, "Collision 2");
+
+    add_collision_struct_func(&collision_2,      &collision_flops_3, "Collision 1         ");
+
+
+    add_collision_struct_func(&collision_3,      &collision_flops_6, "Collision 2         ");
+    add_collision_struct_func(&collision_6,      &collision_flops_6, "Collision 2 Blocking");
 
     // check
-    add_collision_struct_func(&collision_SSA2,   &collision_flops_6, "Collision 3");
+    // add_collision_struct_func(&collision_SSA2,   &collision_flops_6, "Collision 3");
     //add_collision_struct_func(&collision_SSA2_u, &collision_flops_6, "Collision_SSA2_u");
 
-    // check
-    //add_collision_struct_func(&collision_AVX4,   &collision_flops_6, "Collision_AVX4");
-    //add_collision_struct_func(&collision_AVX4_u, &collision_flops_6, "Collision_AVX4_u");
-    add_collision_struct_func(&collision_AVX4_u2, &collision_flops_6, "Collision 4");
-    
+    add_collision_struct_func(&collision_SSA3_nb,   &collision_flops_6, "Collision 3         ");
+    add_collision_struct_func(&collision_SSA3,   &collision_flops_6,    "Collision 3 Blocking");
 
-    //old data structure used unlikely to be better
-    // add_collision_struct_func(&collision_SSA,    &collision_flops_6, "Collision_SSA");
-    // add_collision_struct_func(&collision_SSA_u,  &collision_flops_6, "Collision_SSA_u");
-    // add_collision_struct_func(&collision_AVX,    &collision_flops_6, "Collision_AVX");
-    // add_collision_struct_func(&collision_AVX_u,  &collision_flops_6, "Collision_AVX_u");
-    // add_collision_struct_func(&collision_AVX_u2, &collision_flops_6, "Collision_AVX_u2");   
-    // add_collision_struct_func(&collision_AVX2,   &collision_flops_6, "Collision_AVX2");
-    // add_collision_struct_func(&collision_AVX3,   &collision_flops_6, "Collision_AVX3");
-    // add_collision_struct_func(&collision_AVX3_u, &collision_flops_6, "Collision_AVX3_u"); 
+    // check
+    // add_collision_struct_func(&collision_AVX4,   &collision_flops_6, "Collision_AVX4");
+    //add_collision_struct_func(&collision_AVX4_u, &collision_flops_6, "Collision_AVX4_u");
+    // add_collision_struct_func(&collision_AVX4_u2, &collision_flops_6, "Collision 4");
+
+   add_collision_struct_func(&collision_AVX5_u2_nb, &collision_flops_6, "Collision 4         ");
+    add_collision_struct_func(&collision_AVX5_u2, &collision_flops_6,   "Collision 4 Blocking");
 
 
 }
