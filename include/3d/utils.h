@@ -33,15 +33,38 @@ static const int D3Q27_DIRECTIONS[] = { 0,0,0,  1,0,0, -1,0,0,0,1,0, 0,-1,0, 0,0
 static const double D3Q27_WEIGHTS[] = {8.0/27.0,2.0/27.0,2.0/27.0,2.0/27.0,2.0/27.0,2.0/27.0,2.0/27.0, 1.0/54.0,1.0/54.0,1.0/54.0,1.0/54.0,1.0/54.0,1.0/54.0,1.0/54.0,1.0/54.0,1.0/54.0,1.0/54.0,1.0/54.0,1.0/54.0, 1.0/216.0, 1.0/216.0, 1.0/216.0, 1.0/216.0,1.0/216.0, 1.0/216.0, 1.0/216.0, 1.0/216.0};
 
 
+int equal_d(double a, double b) {
+    return (fabs(a - b)) < tol;
+}
+
 // function to verify two results are the same // up to 6 decimal places
 int equal(double *arr1, double *arr2, int size) {
     for (int i = 0; i < size; i++) {
-        double diff = fabs(arr1[i] - arr2[i]);
-        if (diff > tol) {
+        if (!equal_d(arr1[i], arr2[i])) {
             return 0;
         }
     }
     return 1;
+}
+
+int equalVelocity(LBMarrays *baseline, LBMarrays *second) {
+    int eq = equal(baseline->velocity_field, second->velocity_field, 3 * baseline->nXYZ);
+
+    if(!eq) {
+        for (int i = 0; i < baseline->nXYZ; i++) {
+            bool eq1 = equal_d(baseline->velocity_field[3 * i], second->velocity_fieldX[i]);
+            bool eq2 = equal_d(baseline->velocity_field[3 * i + 1], second->velocity_fieldY[i]);
+            bool eq3 = equal_d(baseline->velocity_field[3 * i + 2], second->velocity_fieldZ[i]);
+
+            if (!eq1 || !eq2 || !eq3) {
+                return 0;
+            }
+        }
+
+        return 1;
+    } else {
+        return eq;
+    }
 }
 
 
@@ -80,7 +103,7 @@ void initialize(int nX, int nY, int nZ, int direction_size,
                 const double* weights,
                 int* reverse_indexes
 ) {
-
+    srand(1000);
 
     for(int i = 0; i < direction_size; i++) {
         for(int j = 0; j < direction_size; j++) {
@@ -105,8 +128,8 @@ void initialize(int nX, int nY, int nZ, int direction_size,
             for(int z = 0; z < nZ; z++) {
                 for(int i = 0; i < direction_size; i++) {
                     int index = x + y * nX + z * nX * nY + i * nX * nY * nZ;
-                    previous_particle_distributions[index] = x+ weights[i];
-                    particle_distributions[index] = x+weights[i];
+                    previous_particle_distributions[index] = weights[i];
+                    particle_distributions[index] = weights[i];
                 }
             }
         }

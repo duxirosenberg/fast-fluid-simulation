@@ -161,7 +161,7 @@ void stream_periodic_memcpy(struct LBMarrays* S, int time) {
             // D3Q15: z * 13 iops
             // D2Q9:  z * 13 iops
             for (int z = 0; z < S->nZ; z++) {
-                int zmd = (S->nZ + z - directionY) % S->nZ;
+                int zmd = (S->nZ + z - directionZ) % S->nZ;
                 int otherZIndex = zmd * S->nXY + distIndex;
                 int zIndex = z * S->nXY + distIndex;
                 memcpy(&S->particle_distributions[zIndex], &S->previous_particle_distributions[otherZIndex + S->nX], (sizeof(double)) * (S->nXY - S->nX));
@@ -172,7 +172,7 @@ void stream_periodic_memcpy(struct LBMarrays* S, int time) {
             // D3Q15: z * 13 iops
             // D2Q9:  z * 13 iops
             for (int z = 0; z < S->nZ; z++) {
-                int zmd = (S->nZ + z - directionY) % S->nZ;
+                int zmd = (S->nZ + z - directionZ) % S->nZ;
                 int otherZIndex = zmd * S->nXY + distIndex;
                 int zIndex = z * S->nXY + distIndex;
                 memcpy(&S->particle_distributions[zIndex + S->nX], &S->previous_particle_distributions[otherZIndex], (sizeof(double)) * (S->nXY - S->nX));
@@ -183,7 +183,7 @@ void stream_periodic_memcpy(struct LBMarrays* S, int time) {
             // D3Q15: 5 * z * (7 + 12 * y) iops
             // D2Q9:  3 * z * (7 + 12 * y) iops
             for (int z = 0; z < S->nZ; z++) {
-                int zmd = (S->nZ + z - directionY) % S->nZ;
+                int zmd = (S->nZ + z - directionZ) % S->nZ;
                 int otherZIndex = zmd * S->nXY + distIndex;
                 int zIndex = z * S->nXY + distIndex;
                 for (int y = 0; y < S->nY; y++) {
@@ -199,7 +199,7 @@ void stream_periodic_memcpy(struct LBMarrays* S, int time) {
             // D3Q15: 5 * z * (7 + 12 * y) iops
             // D2Q9:  3 * z * (7 + 12 * y) iops
             for (int z = 0; z < S->nZ; z++) {
-                int zmd = (S->nZ + z - directionY) % S->nZ;
+                int zmd = (S->nZ + z - directionZ) % S->nZ;
                 int otherZIndex = zmd * S->nXY + distIndex;
                 int zIndex = z * S->nXY + distIndex;
                 for (int y = 0; y < S->nY; y++) {

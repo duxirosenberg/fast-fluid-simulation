@@ -78,17 +78,17 @@ static struct ops stream_periodic_memcpy_flops(struct LBMarrays* S) {
     struct ops ops = {
             0,
             iops,
-            val + 3 * S->direction_size,
-            val
+            (2 * val + 3 * S->direction_size) * (sizeof(double)),
+            val * (sizeof(double))
     };
     return ops;
 }
 
 
 static void register_stream_periodic_functions() {
-    add_stream_periodic_struct_func(&stream_periodic_O1, &stream_periodic_O1_flops, "Stream Periodic - O1 - precalc");
-    add_stream_periodic_struct_func(&stream_periodic_O2, &stream_periodic_O2_flops, "Stream Periodic - O2 - loop reordering");
-    add_stream_periodic_struct_func(&stream_periodic_memcpy, &stream_periodic_memcpy_flops, "Stream Periodic - Memcopy");
+    add_stream_periodic_struct_func(&stream_periodic_O1, &stream_periodic_O1_flops, "Periodic 1");
+    add_stream_periodic_struct_func(&stream_periodic_O2, &stream_periodic_O2_flops, "Periodic 2");
+    add_stream_periodic_struct_func(&stream_periodic_memcpy, &stream_periodic_memcpy_flops, "Periodic 3");
     //add_stream_periodic_struct_func(&stream_periodic_O3, &stream_periodic_baseline_flops, "Stream Periodic - O3 - AVX");
     //add_stream_periodic_struct_func(&stream_periodic_ZYXI, &stream_periodic_baseline_flops, "Stream Periodic - ZYXI loop order");
     //add_stream_periodic_struct_func(&stream_periodic_O21, &stream_periodic_baseline_flops, "Stream Periodic - O21");

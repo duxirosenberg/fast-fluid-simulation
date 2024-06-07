@@ -10,6 +10,8 @@
 #include "csv.h"
 #include "utils.h"
 
+#define LBM_STRUCT
+
 using namespace rapidjson;
 
 inline bool file_exists (const std::string& name) {
@@ -23,7 +25,7 @@ int main(int argc, char** argv) {
     return -1;
   }
 
-	std::ifstream t("../options.json");
+	std::ifstream t("options.json");
 	std::string str((std::istreambuf_iterator<char>(t)),std::istreambuf_iterator<char>());
 	rapidjson::Document d;
 	d.Parse(str.c_str());
@@ -128,6 +130,9 @@ int main(int argc, char** argv) {
 
     auto density_field = (double*) malloc(box_flatten_length * sizeof(double));
     auto velocity_field = (double*) malloc(3 * box_flatten_length * sizeof(double));
+    auto velocity_fieldX = (double*) malloc(box_flatten_length * sizeof(double));
+    auto velocity_fieldY = (double*) malloc(box_flatten_length * sizeof(double));
+    auto velocity_fieldZ = (double*) malloc(box_flatten_length * sizeof(double));
     auto previous_particle_distributions = (double*) malloc(distributions_flatten_length * sizeof(double));
     auto particle_distributions = (double*) malloc(distributions_flatten_length * sizeof(double));
     int* reverse_indexes = (int*) malloc(direction_size * sizeof(int));
@@ -178,7 +183,14 @@ int main(int argc, char** argv) {
 		std::cout << "Using default of p=1 for all x,y,z and u(x,t=0)=0 for all x,y,z. (Steady state)" << '\n';
 		std::cout << "If you wish to use your own initial conditions, please run the program but with command: generate_ic as a argument which will output ic.csv in format of p,u_x,u_y,u_z, assume indexes are incrementing i,j,k for i<NX,j<NY and k<NZ" << '\n';
 	}
-	//Equation 3.5 with delta t = 1, LBM Principles and Practice book.
+
+    for(int i = 0; i < box_flatten_length; i++) {
+        velocity_fieldX[i] = velocity_field[3 * i];
+        velocity_fieldY[i] = velocity_field[3 * i + 1];
+        velocity_fieldZ[i] = velocity_field[3 * i + 2];
+    }
+
+    //Equation 3.5 with delta t = 1, LBM Principles and Practice book.
 	double viscosity = c_s * c_s * (tau - 0.5);
 	std::cout << "Kinematic shear viscosity: " << viscosity << '\n';
     //Equation 4.4.49
@@ -190,7 +202,8 @@ int main(int argc, char** argv) {
 
 
 	#ifdef LBM_STRUCT
-	LBMarrays solver{nX, nY, nZ, direction_size, density_field, velocity_field,
+	LBMarrays solver{nX, nY, nZ, nX*nY, nX*nY*nZ, direction_size, density_field, velocity_field,
+                     velocity_fieldX, velocity_fieldY, velocity_fieldZ,
                      previous_particle_distributions, particle_distributions, reverse_indexes, directions, weights,
                      c_s, tau, gamma_dot, boundary_condition};
 
@@ -203,14 +216,14 @@ int main(int argc, char** argv) {
 
     for(int i = 1; i <= runs; i++) {
         #ifdef LBM_STRUCT
-        perform_timestep_struct(S, i);
+        perform_timestep_1(S, i);
         #else
         perform_timestep_array(nX, nY, nZ, direction_size, i, tau, gamma_dot, c_s, boundary_condition, density_field, velocity_field, previous_particle_distributions, particle_distributions, directions, weights, reverse_indexes);
         #endif
-        if((i+1) % save_every == 0) {
-            double percentage = (double) (i + 1) / (double) (runs) * 100.0;
-            std::cout << "Saving data - " << (i + 1) << "/" << runs << " (" << percentage << "%)" << '\n';
-            output_lbm_data("output/" + std::to_string(i + 1) + ".csv", true, nX, nY, nZ, density_field, velocity_field);
+        if( (i) % save_every == 0) {
+            double percentage = (double) (i) / (double) (runs) * 100.0;
+            std::cout << "Saving data - " << (i) << "/" << runs << " (" << percentage << "%)" << '\n';
+            output_lbm_data(testFolder + std::to_string(i) + ".csv", true, nX, nY, nZ, density_field, velocity_field);
             //output_velocity(nX, nY, velocity_field);
         }
     }

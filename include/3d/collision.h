@@ -37,11 +37,10 @@ void collision_1(struct LBMarrays* S);
 // avoid division
 void collision_2(struct LBMarrays* S);
 
-
+// removed acces to previous particle distributiions for increasing operational 
+// intenity, without increasing flops
 // reorder loops to the better memory dynamic variant
 void collision_3(struct LBMarrays* S);
-
-
 // cache optimized by blocking of loops 
 // will only help for sufficiently large grids 
 // (when the double Gridsize 2xN^3 doesnt fit into cache ... (usually at 32 or 64)
@@ -60,6 +59,10 @@ void collision_SSA2(struct LBMarrays* S);
 // unrolled once (worse)
 void collision_SSA2_u(struct LBMarrays* S); 
 
+
+
+void collision_SSA3(struct LBMarrays* S); 
+void collision_SSA3_nb(struct LBMarrays* S); 
 
 
 // AVX2 VECTORISATION:
@@ -83,6 +86,11 @@ void collision_AVX4(struct LBMarrays* S);
 void collision_AVX4_u(struct LBMarrays* S);
 void collision_AVX4_u2(struct LBMarrays* S);
 
+void collision_AVX5_u2(struct LBMarrays* S);
+void collision_AVX5_u2_nb(struct LBMarrays* S);
+
+
+
 
 // reordering seems to usually worsen, compiler seems to handle current
 // instruction order pretty decently 
@@ -98,7 +106,7 @@ static struct ops collision_baseline_flops(struct LBMarrays* S) {
     struct ops ops = {
             2 + val * 29,
             val * 23,
-            val0*(S->direction_size+3+1)*(int)(sizeof(double)) + S->direction_size*(int)(3*sizeof(int) +sizeof(double)),
+            val0*(2*S->direction_size+3+1)*(int)(sizeof(double)) + S->direction_size*(int)(3*sizeof(int) +sizeof(double)),
             val*(int)(sizeof(double))
     
     };
@@ -106,11 +114,23 @@ static struct ops collision_baseline_flops(struct LBMarrays* S) {
 }
 
 
-static struct ops collision_flops_3(struct LBMarrays* S) {
+static struct ops collision_flops_2(struct LBMarrays* S) {
     long val = S->nXYZ * S->direction_size;
     struct ops ops = {
-            5 + val * 22,
+            7 + S->nXYZ*5 + 17 * val,
             val*5 + 3*S->direction_size,
+            S->nXYZ*(S->direction_size*2+3+1)*(int)(sizeof(double)) + S->direction_size*(int)(3*sizeof(int) +sizeof(double)),
+            val*(int)(sizeof(double))
+    
+    };
+    return ops;
+}
+
+static struct ops collision_flops_nb(struct LBMarrays* S) {
+    long val = S->nXYZ * S->direction_size;
+    struct ops ops = {
+            7 + val * 22,
+            val*2 + 3*S->direction_size,
             S->nXYZ*(S->direction_size+3+1)*(int)(sizeof(double)) + S->direction_size*(int)(3*sizeof(int) +sizeof(double)),
             val*(int)(sizeof(double))
     
@@ -119,11 +139,12 @@ static struct ops collision_flops_3(struct LBMarrays* S) {
 }
 
 
-static struct ops collision_flops_6(struct LBMarrays* S) {
+static struct ops collision_flops_blocking(struct LBMarrays* S) {
     long val = S->nXYZ * S->direction_size;
+    const int nBB = BLOCKSIZE_COL > S->nXYZ ? S->nXYZ : BLOCKSIZE_COL;
     struct ops ops = {
-            5 + val * 22,
-            val*5 + (S->nXYZ/BLOCKSIZE_COL)*3*S->direction_size,
+            7 + val * 22,
+            1 + val*2 + (S->nXYZ/nBB)*3*S->direction_size,
             S->nXYZ*(S->direction_size+3+1)*(int)(sizeof(double)) + S->direction_size*(int)(3*sizeof(int) +sizeof(double)),
             val*(int)(sizeof(double))
     
@@ -143,40 +164,17 @@ static struct ops collision_flops_6(struct LBMarrays* S) {
 static void register_collision_functions() {
     // add_collision_array_func(&collision_arrays, &collision_baseline_flops, "Collision - Arrays Bl");
     // add_collision_struct_func(&collision_baseline, &collision_baseline_flops, "Collision_0");  //baseline
-    
- 
-    // for intel skylake, these 4 are optimal 4 steps ..
-    // add_collision_struct_func(&collision_AVX4_u2, &collision_flops_6,    "Collision_4"); 
-    // add_collision_struct_func(&collision_SSA2,    &collision_flops_6,    "Collision_3");
-    // add_collision_struct_func(&collision_6,       &collision_flops_6,    "Collision_2");
-    // add_collision_struct_func(&collision_3,       &collision_flops_3,    "Collision_1");
+     
+    add_collision_struct_func(&collision_2,      &collision_flops_2, "Collision 1         ");
 
+    add_collision_struct_func(&collision_3,      &collision_flops_nb, "Collision 2         ");
+    add_collision_struct_func(&collision_6,      &collision_flops_blocking, "Collision 2 Blocking");
 
+    add_collision_struct_func(&collision_SSA3_nb,   &collision_flops_nb, "Collision 3         ");
+    add_collision_struct_func(&collision_SSA3,   &collision_flops_blocking,    "Collision 3 Blocking");
 
-
-
-    add_collision_struct_func(&collision_3,      &collision_flops_3, "Collision_3");  
-    add_collision_struct_func(&collision_6,      &collision_flops_6, "Collision_6");
-
-    // check
-    add_collision_struct_func(&collision_SSA2,   &collision_flops_6, "Collision_SSA2");
-    add_collision_struct_func(&collision_SSA2_u, &collision_flops_6, "Collision_SSA2_u");
-
-    // check
-    add_collision_struct_func(&collision_AVX4,   &collision_flops_6, "Collision_AVX4"); 
-    add_collision_struct_func(&collision_AVX4_u, &collision_flops_6, "Collision_AVX4_u");
-    add_collision_struct_func(&collision_AVX4_u2,&collision_flops_6, "Collision_AVX4_u2"); 
-    
-
-    //old data structure used unlikely to be better
-    // add_collision_struct_func(&collision_SSA,    &collision_flops_6, "Collision_SSA");
-    // add_collision_struct_func(&collision_SSA_u,  &collision_flops_6, "Collision_SSA_u");
-    // add_collision_struct_func(&collision_AVX,    &collision_flops_6, "Collision_AVX");
-    // add_collision_struct_func(&collision_AVX_u,  &collision_flops_6, "Collision_AVX_u");
-    // add_collision_struct_func(&collision_AVX_u2, &collision_flops_6, "Collision_AVX_u2");   
-    // add_collision_struct_func(&collision_AVX2,   &collision_flops_6, "Collision_AVX2");
-    // add_collision_struct_func(&collision_AVX3,   &collision_flops_6, "Collision_AVX3");
-    // add_collision_struct_func(&collision_AVX3_u, &collision_flops_6, "Collision_AVX3_u"); 
+    add_collision_struct_func(&collision_AVX5_u2_nb, &collision_flops_nb, "Collision 4         ");
+    add_collision_struct_func(&collision_AVX5_u2, &collision_flops_blocking,   "Collision 4 Blocking");
 
 
 }

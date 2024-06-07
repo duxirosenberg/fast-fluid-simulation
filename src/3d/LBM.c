@@ -67,3 +67,59 @@ void perform_timestep_array(int nX, int nY, int nZ, int direction_size, int time
     // Intops: nX * nY * nZ * (10 + 14 * q)
     momentum_arrays(nX, nY, nZ, direction_size, density_field, velocity_field, particle_distributions, directions);
 }
+
+
+void perform_timestep_1(struct LBMarrays* solver, int time) {
+    collision_2(solver);
+
+    if (solver->boundary_condition == 1) {
+        stream_periodic_O1(solver, time);
+    } else if(solver->boundary_condition == 2) {
+        stream_couette_code_motion(solver);
+    } else if(solver->boundary_condition == 3) {
+        stream_lees_edwards_structural(solver, time);
+    }
+    momentumO1(solver);
+}
+
+
+void perform_timestep_2(struct LBMarrays* solver, int time) {
+    collision_3(solver);
+
+    if (solver->boundary_condition == 1) {
+        stream_periodic_O2(solver, time);
+    } else if(solver->boundary_condition == 2) {
+        stream_couette_loop_structure(solver);
+    } else if(solver->boundary_condition == 3) {
+        stream_lees_edwards_loop_order(solver, time);
+    }
+    momentumO2(solver);
+}
+
+
+void perform_timestep_3(struct LBMarrays* solver, int time) {
+    collision_SSA3_nb(solver);
+
+    if (solver->boundary_condition == 1) {
+        stream_periodic_memcpy(solver, time);
+    } else if(solver->boundary_condition == 2) {
+        stream_couette_memcpy(solver);
+    } else if(solver->boundary_condition == 3) {
+        stream_lees_edwards_loop_copy(solver, time);
+    }
+    momentumO25(solver);
+}
+
+
+void perform_timestep_4(struct LBMarrays* solver, int time) {
+    collision_AVX5_u2_nb(solver);
+
+    if (solver->boundary_condition == 1) {
+        stream_periodic_memcpy(solver, time);
+    } else if(solver->boundary_condition == 2) {
+        stream_couette_avx(solver);
+    } else if(solver->boundary_condition == 3) {
+        stream_lees_edwards_avx(solver, time);
+    }
+    momentumO6(solver);
+}
