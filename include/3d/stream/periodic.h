@@ -78,8 +78,8 @@ static struct ops stream_periodic_memcpy_flops(struct LBMarrays* S) {
     struct ops ops = {
             0,
             iops,
-            val + 3 * S->direction_size,
-            val
+            (2 * val + 3 * S->direction_size) * (sizeof(double)),
+            val * (sizeof(double))
     };
     return ops;
 }

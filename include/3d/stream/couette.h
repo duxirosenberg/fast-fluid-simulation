@@ -88,17 +88,23 @@ static struct ops stream_couette_memcpy_flops(struct LBMarrays* S) {
     int nXY = S->nXY;
     int nX = S->nX;int nY = S->nY;int nZ = S->nZ;
     double t1;
-    if(q==27){
-        t1 = 3/27.;
-    }else{//q==15
-        t1 = 1/15.;
+    long upDownBoundary = S->direction_size * 2 / 3;
+    long upBoundary = S->direction_size / 3;
+    long periodicIops;
+    if(q == 27) {
+        periodicIops = 13 + 6 * q + 78 * nZ + 18 * nZ * (7 + 12 * (S->nY - 2));
+    } else if (q == 15) {
+        periodicIops = 13 + 6 * q + 26 * nZ + 10 * nZ * (7 + 12 * (S->nY - 2));
+    } else {
+        periodicIops = 1 + 6 * q + 26 * nZ +  6 * nZ * (7 + 12 * (S->nY - 2));
     }
-    int t2 = q*((2/3.)*nZX + (3./q)*nXYZ + 2*t1*nZ*(nXY-nX) + (nZ/3.)*(nY-1/3)*nX);
-    long read = (long) (1 +2*t2)*sizeof(double)+(10)*sizeof(int);
-    long written = (long) t2*sizeof(double);
+
+   //int t2 = q*((2/3.)*nZX + (3./q)*nXYZ + 2*t1*nZ*(nXY-nX) + (nZ/3.)*(nY-1/3)*nX);
+    long read = (2 * q * nXYZ + 5 * q) * sizeof(double);
+    long written = (q * nXYZ)*sizeof(double);
     struct ops ops = {
-        (long)(6 + q *(nZ * nX / 3)), //flops
-        (long)(9 +q * ((1/3.)*nZ*6 + (1/3.)*(10+nX/2.) +4+4)), //iops
+        (long)(2 * q + upBoundary * nZ * nX), //flops
+        (long)(upDownBoundary * nZ * 7 + upBoundary * nZ * (1 + 2 * nX) ) + periodicIops, //iops
         read, //bytes read
         written //bytes written
     };
@@ -112,7 +118,7 @@ static struct ops stream_couette_memcpy_flops(struct LBMarrays* S) {
 
 
 static void register_stream_couette_functions() {
-    add_stream_couette_struct_func(&stream_couette_code_motion, &stream_couette_baseline_flops, "Couette 1");
+    add_stream_couette_struct_func(&stream_couette_code_motion, &stream_couette_codemotion_flops, "Couette 1");
     add_stream_couette_struct_func(&stream_couette_loop_structure, &stream_couette_loop_structure_flops, "Couette 2");
     add_stream_couette_struct_func(&stream_couette_memcpy, &stream_couette_memcpy_flops, "Couette 3");
     add_stream_couette_struct_func(&stream_couette_avx, &stream_couette_memcpy_flops, "Couette 4");

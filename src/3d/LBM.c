@@ -70,7 +70,7 @@ void perform_timestep_array(int nX, int nY, int nZ, int direction_size, int time
 
 
 void perform_timestep_1(struct LBMarrays* solver, int time) {
-    collision_3(solver);
+    collision_2(solver);
 
     if (solver->boundary_condition == 1) {
         stream_periodic_O1(solver, time);
@@ -84,7 +84,7 @@ void perform_timestep_1(struct LBMarrays* solver, int time) {
 
 
 void perform_timestep_2(struct LBMarrays* solver, int time) {
-    collision_6(solver);
+    collision_3(solver);
 
     if (solver->boundary_condition == 1) {
         stream_periodic_O2(solver, time);
@@ -98,7 +98,7 @@ void perform_timestep_2(struct LBMarrays* solver, int time) {
 
 
 void perform_timestep_3(struct LBMarrays* solver, int time) {
-    collision_SSA2(solver);
+    collision_SSA3_nb(solver);
 
     if (solver->boundary_condition == 1) {
         stream_periodic_memcpy(solver, time);
@@ -112,7 +112,7 @@ void perform_timestep_3(struct LBMarrays* solver, int time) {
 
 
 void perform_timestep_4(struct LBMarrays* solver, int time) {
-    collision_AVX4_u2(solver);
+    collision_AVX5_u2_nb(solver);
 
     if (solver->boundary_condition == 1) {
         stream_periodic_memcpy(solver, time);

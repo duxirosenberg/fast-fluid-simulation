@@ -61,7 +61,7 @@ static struct ops perform_timestep_1_flops(struct LBMarrays* S) {
     if(S->boundary_condition == 1) {
         streamOps = stream_periodic_O1_flops(S);
     } else if(S->boundary_condition == 2) {
-        streamOps = stream_couette_baseline_flops(S);
+        streamOps = stream_couette_codemotion_flops(S);
     } else if(S->boundary_condition == 3) {
         streamOps = stream_lees_edwards_flops_1(S);
     }
