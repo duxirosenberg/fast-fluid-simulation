@@ -247,6 +247,103 @@ void momentumO25(struct LBMarrays* S) {
     }
 }
 
+
+void momentumO3(struct LBMarrays* S) {
+    int SnX = S->nX;
+    int SnY = S->nY;
+    int SnZ = S->nZ;
+    int SnXSnY = SnX * SnY;
+    int SnXSnYSnZ = SnXSnY * SnZ;
+    int direction_size = S->direction_size;
+    const int* directions = S->directions;
+    double* particle_distributions = S->particle_distributions;
+    double* density_field = S->density_field;
+    double* velocity_field = S->velocity_field;
+
+    // Temporary arrays for accumulation
+    double* temp_density_field = (double*)calloc(SnXSnYSnZ, sizeof(double));
+    double* temp_velocity_field = (double*)calloc(3 * SnXSnYSnZ, sizeof(double));
+
+
+    for (int i = 0; i < direction_size; i++) {
+        int idx = 3 * i;
+        int dir_x = directions[idx];
+        int dir_y = directions[idx + 1];
+        int dir_z = directions[idx + 2];
+
+
+        for (int index = 0; index < SnXSnYSnZ; index += 4) {
+            double dist[4];
+
+            // Load dist values for 4 indices in parallel
+            for (int j = 0; j < 4; j++) {
+                int ind = index + j;
+                dist[j] = particle_distributions[ind + i * SnXSnYSnZ];
+            }
+
+            // Update temp_density_field for 4 indices in parallel
+            __m256d dist_vec = _mm256_loadu_pd(dist);
+            __m256d temp_density_field_vec = _mm256_loadu_pd(&temp_density_field[index]);
+            temp_density_field_vec = _mm256_add_pd(temp_density_field_vec, dist_vec);
+            _mm256_storeu_pd(&temp_density_field[index], temp_density_field_vec);
+
+            // Update temp_velocity_field for 4 indices in parallel
+            __m256d dir_x_vec = _mm256_set1_pd(dir_x);
+            __m256d dir_y_vec = _mm256_set1_pd(dir_y);
+            __m256d dir_z_vec = _mm256_set1_pd(dir_z);
+            __m256d dist_dir_x = _mm256_mul_pd(dist_vec, dir_x_vec);
+            __m256d dist_dir_y = _mm256_mul_pd(dist_vec, dir_y_vec);
+            __m256d dist_dir_z = _mm256_mul_pd(dist_vec, dir_z_vec);
+
+            __m256d temp_velocity_x = _mm256_loadu_pd(&temp_velocity_field[3 * index]);
+            __m256d temp_velocity_y = _mm256_loadu_pd(&temp_velocity_field[3 * index + 1]);
+            __m256d temp_velocity_z = _mm256_loadu_pd(&temp_velocity_field[3 * index + 2]);
+
+            temp_velocity_x = _mm256_add_pd(temp_velocity_x, dist_dir_x);
+            temp_velocity_y = _mm256_add_pd(temp_velocity_y, dist_dir_y);
+            temp_velocity_z = _mm256_add_pd(temp_velocity_z, dist_dir_z);
+
+            _mm256_storeu_pd(&temp_velocity_field[3 * index], temp_velocity_x);
+            _mm256_storeu_pd(&temp_velocity_field[3 * index + 1], temp_velocity_y);
+            _mm256_storeu_pd(&temp_velocity_field[3 * index + 2], temp_velocity_z);
+        }
+    }
+
+    // Copy the results from temporary arrays to the final arrays
+    for (int index = 0; index < SnXSnYSnZ; index += 4) {
+        // Load new density values from the temp_density_field
+        __m256d new_density_vec = _mm256_loadu_pd(&temp_density_field[index]);
+
+        // Store new density values to density_field
+        _mm256_storeu_pd(&density_field[index], new_density_vec);
+
+        // Compute the inverse of new density
+        __m256d inv_new_density_vec = _mm256_div_pd(_mm256_set1_pd(1.0), new_density_vec);
+
+        // Load temp velocity values
+        __m256d temp_velocity_x_vec = _mm256_loadu_pd(&temp_velocity_field[3 * index]);
+        __m256d temp_velocity_y_vec = _mm256_loadu_pd(&temp_velocity_field[3 * index + 4]);
+        __m256d temp_velocity_z_vec = _mm256_loadu_pd(&temp_velocity_field[3 * index + 8]);
+
+        // Compute final velocity by multiplying with the inverse density
+        __m256d velocity_x_vec = _mm256_mul_pd(temp_velocity_x_vec, inv_new_density_vec);
+        __m256d velocity_y_vec = _mm256_mul_pd(temp_velocity_y_vec, inv_new_density_vec);
+        __m256d velocity_z_vec = _mm256_mul_pd(temp_velocity_z_vec, inv_new_density_vec);
+
+        // Store the computed velocity values to velocity_field
+        _mm256_storeu_pd(&velocity_field[3 * index], velocity_x_vec);
+        _mm256_storeu_pd(&velocity_field[3 * index + 4], velocity_y_vec);
+        _mm256_storeu_pd(&velocity_field[3 * index + 8], velocity_z_vec);
+    }
+
+    // Free temporary arrays
+    free(temp_density_field);
+    free(temp_velocity_field);
+}
+
+
+
+
 void momentumO6(struct LBMarrays* S) {
     int SnX = S->nX;
     int SnY = S->nY;
@@ -299,6 +396,76 @@ void momentumO6(struct LBMarrays* S) {
         _mm256_storeu_pd(&velocity_fieldY[index], _mm256_mul_pd(vY, inv_density));
         __m256d vZ = _mm256_loadu_pd(&velocity_fieldZ[index]);
         _mm256_storeu_pd(&velocity_fieldZ[index], _mm256_mul_pd(vZ, inv_density));
+    }
+}
+
+
+void momentumO61(struct LBMarrays* S) {
+    int SnX = S->nX;
+    int SnY = S->nY;
+    int SnZ = S->nZ;
+    int SnXSnY = SnX * SnY;
+    int SnXSnYSnZ = SnXSnY * SnZ;
+    int direction_size = S->direction_size;
+    const int* directions = S->directions;
+    double* particle_distributions = S->particle_distributions;
+    double* density_field = S->density_field;
+    double* velocity_fieldX = S->velocity_fieldX;
+    double* velocity_fieldY = S->velocity_fieldY;
+    double* velocity_fieldZ = S->velocity_fieldZ;
+
+    {
+        __m256d vDirectionX = _mm256_set1_pd(directions[0]);
+        __m256d vDirectionY = _mm256_set1_pd(directions[1]);
+        __m256d vDirectionZ = _mm256_set1_pd(directions[2]);
+        for (int index = 0; index < SnXSnYSnZ; index+=4) {
+            __m256d distV = _mm256_loadu_pd(&particle_distributions[index]);
+            _mm256_storeu_pd(&density_field[index], distV);
+            __m256d AX =_mm256_mul_pd(distV, vDirectionX);
+            __m256d AY =_mm256_mul_pd(distV, vDirectionY);
+            __m256d AZ =_mm256_mul_pd(distV, vDirectionZ);
+            _mm256_storeu_pd(&velocity_fieldX[index], AX);
+            _mm256_storeu_pd(&velocity_fieldY[index], AY);
+            _mm256_storeu_pd(&velocity_fieldZ[index], AZ);
+        }
+    }
+    for (int i = 1; i < direction_size; i++) {
+        int idx = 3 * i;
+        __m256d vDirectionX = _mm256_set1_pd(directions[idx]);
+        __m256d vDirectionY = _mm256_set1_pd(directions[idx + 1]);
+        __m256d vDirectionZ = _mm256_set1_pd(directions[idx + 2]);
+        int particleIndex = i * SnXSnYSnZ;
+        for (int index = 0; index < SnXSnYSnZ; index+=4) {
+            __m256d distV = _mm256_loadu_pd(&particle_distributions[index + particleIndex]);
+            __m256d A = _mm256_loadu_pd(&density_field[index]);
+            __m256d B = _mm256_add_pd(A, distV);
+            _mm256_storeu_pd(&density_field[index], B);
+            __m256d AX = _mm256_loadu_pd(&velocity_fieldX[index]);
+            __m256d AY = _mm256_loadu_pd(&velocity_fieldY[index]);
+            __m256d AZ = _mm256_loadu_pd(&velocity_fieldZ[index]);     
+            __m256d BX = _mm256_fmadd_pd(distV, vDirectionX, AX);            
+            __m256d BY = _mm256_fmadd_pd(distV, vDirectionY, AY);
+            __m256d BZ = _mm256_fmadd_pd(distV, vDirectionZ, AZ);
+            _mm256_storeu_pd(&velocity_fieldX[index], BX);
+            _mm256_storeu_pd(&velocity_fieldY[index], BY);
+            _mm256_storeu_pd(&velocity_fieldZ[index], BZ);
+        }
+    }
+
+    // Unrolling the loop by a factor of 4
+    __m256d one = _mm256_set1_pd(1.0);
+    for (int index = 0; index < SnXSnYSnZ; index += 4) {
+        __m256d density = _mm256_loadu_pd(&density_field[index]);
+        __m256d inv_density = _mm256_div_pd(one, density);
+        __m256d vX = _mm256_loadu_pd(&velocity_fieldX[index]);
+        __m256d vY = _mm256_loadu_pd(&velocity_fieldY[index]);
+        __m256d vZ = _mm256_loadu_pd(&velocity_fieldZ[index]);
+        __m256d AX =  _mm256_mul_pd(vX, inv_density);
+        __m256d AY =  _mm256_mul_pd(vY, inv_density);
+        __m256d AZ =  _mm256_mul_pd(vZ, inv_density);
+        _mm256_storeu_pd(&velocity_fieldX[index], AX);
+        _mm256_storeu_pd(&velocity_fieldY[index], AY);
+        _mm256_storeu_pd(&velocity_fieldZ[index], AZ);
     }
 }
 

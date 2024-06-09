@@ -16,6 +16,7 @@ void momentumO1(struct LBMarrays* S);
 void momentumO2(struct LBMarrays* S);
 void momentumO25(struct LBMarrays* S);
 void momentumO6(struct LBMarrays* S);
+void momentumO61(struct LBMarrays* S);
 
 //void momentumO21(struct LBMarrays* S);
 //void momentumO22(struct LBMarrays* S);
@@ -115,6 +116,7 @@ static void register_momentum_functions() {
     add_momentum_struct_func(&momentumO2, &momentum_O2_flops, "Momentum 2");
     add_momentum_struct_func(&momentumO25, &momentum_O2_flops, "Momentum 3");
     add_momentum_struct_func(&momentumO6, &momentum_O2_flops, "Momentum 4");
+    add_momentum_struct_func(&momentumO61, &momentum_O2_flops, "Momentum 42");
 
     //add_momentum_array_func(&momentum_arraysO2, &momentum_baseline_flops, "Momentum - 02 arrays");
     //add_momentum_struct_func(&momentumO3, &momentum_baseline_flops, "Momentum - 03 - AVX");
