@@ -473,9 +473,9 @@ void collision_AVX4(struct LBMarrays* S) {
                     __m256d tmpB          = _mm256_mul_pd(df_pd, tmpA);
                     __m256d tmpC          = _mm256_mul_pd(omTAUinv_pd, PD_pd);
 
-                    // __m256d A              = _mm256_fmadd_pd(dv_dot,twoCS2inv_pd, ones_pd);
+                    // __m256d A              = _mm256_fmadd_pd(dv_dot,halfCS2inv_pd, ones_pd);
                     // __m256d B              = _mm256_fmsub_pd(dv_dot, A, v_norm);
-                    // __m256d C              = _mm256_fmadd_pd(B, twoCS2inv_pd, ones_pd);
+                    // __m256d C              = _mm256_fmadd_pd(B, halfCS2inv_pd, ones_pd);
                     // __m256d D              = _mm256_fmadd_pd(tmpB,C,tmpC);
                     __m256d A              = _mm256_fmadd_pd(dv_dot,halfCS2inv_pd, twos_pd);
                     __m256d B              = _mm256_fmsub_pd(dv_dot, A, v_norm);
@@ -508,12 +508,12 @@ void collision_AVX5_u2(struct LBMarrays* S){
     const int limit0 = S->nXYZ - rest;
 
 
-        __m256d ones_pd      = _mm256_set1_pd(1.0);
-        __m256d CS2inv_pd    = _mm256_set1_pd(1.0/cs2);
-        __m256d twoCS2inv_pd = _mm256_set1_pd(0.5/cs2);
-        __m256d twoCS4inv_pd = _mm256_set1_pd(0.5/cs4);
-        __m256d TAUinv_pd    = _mm256_set1_pd(tau_inv);
-        __m256d omTAUinv_pd  = _mm256_set1_pd(1.0 - tau_inv);
+    __m256d ones_pd      = _mm256_set1_pd(1.0);
+    __m256d CS2inv_pd    = _mm256_set1_pd(cs2_inv);
+    __m256d halfCS2inv_pd = _mm256_set1_pd(half_cs2_inv);
+    __m256d halfCS4inv_pd = _mm256_set1_pd(half_cs4_inv);
+    __m256d TAUinv_pd    = _mm256_set1_pd(tau_inv);
+    __m256d omTAUinv_pd  = _mm256_set1_pd(omtauinv);
         
 
         for(int nxyz = 0; nxyz < limit0; nxyz+=nBB) {
@@ -611,7 +611,7 @@ void collision_AVX5_u2(struct LBMarrays* S){
                     __m256d dotSqr        = _mm256_mul_pd(dv_dot, dv_dot);
                     __m256d A             = _mm256_fmsub_pd( dotSqr,      CS2inv_pd, v_norm);
                     __m256d B             = _mm256_fmadd_pd(dv_dot, CS2inv_pd, ones_pd);
-                    __m256d C             = _mm256_fmadd_pd(A, twoCS2inv_pd, B);
+                    __m256d C             = _mm256_fmadd_pd(A, halfCS2inv_pd, B);
                     __m256d D             = _mm256_fmadd_pd( tmpB,        C,            tmpC);
 
 
@@ -620,7 +620,7 @@ void collision_AVX5_u2(struct LBMarrays* S){
                     __m256d b_dotSqr        = _mm256_mul_pd(b_dv_dot, b_dv_dot);
                     __m256d b_A             = _mm256_fmsub_pd( b_dotSqr,      CS2inv_pd, b_v_norm);
                     __m256d b_B             = _mm256_fmadd_pd(b_dv_dot, CS2inv_pd, ones_pd);
-                    __m256d b_C             = _mm256_fmadd_pd(b_A, twoCS2inv_pd, b_B);
+                    __m256d b_C             = _mm256_fmadd_pd(b_A, halfCS2inv_pd, b_B);
                     __m256d b_D             = _mm256_fmadd_pd( b_tmpB,        b_C,            b_tmpC);
 
 
@@ -629,7 +629,7 @@ void collision_AVX5_u2(struct LBMarrays* S){
                     __m256d c_dotSqr        = _mm256_mul_pd(c_dv_dot, c_dv_dot);
                     __m256d c_A             = _mm256_fmsub_pd( c_dotSqr,      CS2inv_pd, c_v_norm);
                     __m256d c_B             = _mm256_fmadd_pd(c_dv_dot, CS2inv_pd, ones_pd);
-                    __m256d c_C             = _mm256_fmadd_pd(c_A, twoCS2inv_pd, c_B);
+                    __m256d c_C             = _mm256_fmadd_pd(c_A, halfCS2inv_pd, c_B);
                     __m256d c_D             = _mm256_fmadd_pd( c_tmpB,        c_C,            c_tmpC);
 
 
@@ -638,7 +638,7 @@ void collision_AVX5_u2(struct LBMarrays* S){
                     __m256d d_dotSqr        = _mm256_mul_pd(d_dv_dot, d_dv_dot);
                     __m256d d_A             = _mm256_fmsub_pd( d_dotSqr,      CS2inv_pd, d_v_norm);
                     __m256d d_B             = _mm256_fmadd_pd(d_dv_dot, CS2inv_pd, ones_pd);
-                    __m256d d_C             = _mm256_fmadd_pd(d_A, twoCS2inv_pd, d_B);
+                    __m256d d_C             = _mm256_fmadd_pd(d_A, halfCS2inv_pd, d_B);
                     __m256d d_D             = _mm256_fmadd_pd( d_tmpB,        d_C,            d_tmpC);           
 
                     //////////////////
@@ -718,12 +718,12 @@ void collision_AVX5_u2_nb(struct LBMarrays* S){
     const int limit0 = S->nXYZ - rest;
 
 
-        __m256d ones_pd      = _mm256_set1_pd(1.0);
-        __m256d CS2inv_pd    = _mm256_set1_pd(1.0/cs2);
-        __m256d twoCS2inv_pd = _mm256_set1_pd(0.5/cs2);
-        __m256d twoCS4inv_pd = _mm256_set1_pd(0.5/cs4);
-        __m256d TAUinv_pd    = _mm256_set1_pd(tau_inv);
-        __m256d omTAUinv_pd  = _mm256_set1_pd(1.0 - tau_inv);
+    __m256d ones_pd      = _mm256_set1_pd(1.0);
+    __m256d CS2inv_pd    = _mm256_set1_pd(cs2_inv);
+    __m256d halfCS2inv_pd = _mm256_set1_pd(half_cs2_inv);
+    __m256d halfCS4inv_pd = _mm256_set1_pd(half_cs4_inv);
+    __m256d TAUinv_pd    = _mm256_set1_pd(tau_inv);
+    __m256d omTAUinv_pd  = _mm256_set1_pd(omtauinv);
         
 
             for(int i = 0; i < S->direction_size; i++) { 
@@ -820,7 +820,7 @@ void collision_AVX5_u2_nb(struct LBMarrays* S){
                     __m256d dotSqr        = _mm256_mul_pd(dv_dot, dv_dot);
                     __m256d A             = _mm256_fmsub_pd( dotSqr,      CS2inv_pd, v_norm);
                     __m256d B             = _mm256_fmadd_pd(dv_dot, CS2inv_pd, ones_pd);
-                    __m256d C             = _mm256_fmadd_pd(A, twoCS2inv_pd, B);
+                    __m256d C             = _mm256_fmadd_pd(A, halfCS2inv_pd, B);
                     __m256d D             = _mm256_fmadd_pd( tmpB,        C,            tmpC);
 
 
@@ -829,7 +829,7 @@ void collision_AVX5_u2_nb(struct LBMarrays* S){
                     __m256d b_dotSqr        = _mm256_mul_pd(b_dv_dot, b_dv_dot);
                     __m256d b_A             = _mm256_fmsub_pd( b_dotSqr,      CS2inv_pd, b_v_norm);
                     __m256d b_B             = _mm256_fmadd_pd(b_dv_dot, CS2inv_pd, ones_pd);
-                    __m256d b_C             = _mm256_fmadd_pd(b_A, twoCS2inv_pd, b_B);
+                    __m256d b_C             = _mm256_fmadd_pd(b_A, halfCS2inv_pd, b_B);
                     __m256d b_D             = _mm256_fmadd_pd( b_tmpB,        b_C,            b_tmpC);
 
 
@@ -838,7 +838,7 @@ void collision_AVX5_u2_nb(struct LBMarrays* S){
                     __m256d c_dotSqr        = _mm256_mul_pd(c_dv_dot, c_dv_dot);
                     __m256d c_A             = _mm256_fmsub_pd( c_dotSqr,      CS2inv_pd, c_v_norm);
                     __m256d c_B             = _mm256_fmadd_pd(c_dv_dot, CS2inv_pd, ones_pd);
-                    __m256d c_C             = _mm256_fmadd_pd(c_A, twoCS2inv_pd, c_B);
+                    __m256d c_C             = _mm256_fmadd_pd(c_A, halfCS2inv_pd, c_B);
                     __m256d c_D             = _mm256_fmadd_pd( c_tmpB,        c_C,            c_tmpC);
 
 
@@ -847,7 +847,7 @@ void collision_AVX5_u2_nb(struct LBMarrays* S){
                     __m256d d_dotSqr        = _mm256_mul_pd(d_dv_dot, d_dv_dot);
                     __m256d d_A             = _mm256_fmsub_pd( d_dotSqr,      CS2inv_pd, d_v_norm);
                     __m256d d_B             = _mm256_fmadd_pd(d_dv_dot, CS2inv_pd, ones_pd);
-                    __m256d d_C             = _mm256_fmadd_pd(d_A, twoCS2inv_pd, d_B);
+                    __m256d d_C             = _mm256_fmadd_pd(d_A, halfCS2inv_pd, d_B);
                     __m256d d_D             = _mm256_fmadd_pd( d_tmpB,        d_C,            d_tmpC);           
 
                     //////////////////
@@ -919,21 +919,21 @@ void collision_AVX5_u2_nb(struct LBMarrays* S){
 
         // __m256d twos_pd      = _mm256_set1_pd(2.0);
 
-                    // __m256d A              = _mm256_fmadd_pd( dv_dot,      twoCS2inv_pd, twos_pd);
+                    // __m256d A              = _mm256_fmadd_pd( dv_dot,      halfCS2inv_pd, twos_pd);
                     // __m256d B              = _mm256_fmsub_pd( dv_dot,      A,            v_norm);
-                    // __m256d C              = _mm256_fmadd_pd( B,           twoCS2inv_pd, ones_pd);
+                    // __m256d C              = _mm256_fmadd_pd( B,           halfCS2inv_pd, ones_pd);
                     // __m256d D              = _mm256_fmadd_pd( tmpB,        C,            tmpC);
-                    // __m256d b_A              = _mm256_fmadd_pd( b_dv_dot,      twoCS2inv_pd,   twos_pd);
+                    // __m256d b_A              = _mm256_fmadd_pd( b_dv_dot,      halfCS2inv_pd,   twos_pd);
                     // __m256d b_B              = _mm256_fmsub_pd( b_dv_dot,      b_A,            b_v_norm);
-                    // __m256d b_C              = _mm256_fmadd_pd( b_B,           twoCS2inv_pd,   ones_pd);
+                    // __m256d b_C              = _mm256_fmadd_pd( b_B,           halfCS2inv_pd,   ones_pd);
                     // __m256d b_D              = _mm256_fmadd_pd( b_tmpB,        b_C,            b_tmpC);
-                    // __m256d c_A              = _mm256_fmadd_pd( c_dv_dot,      twoCS2inv_pd,   ones_pd);
+                    // __m256d c_A              = _mm256_fmadd_pd( c_dv_dot,      halfCS2inv_pd,   ones_pd);
                     // __m256d c_B              = _mm256_fmsub_pd( c_dv_dot,      c_A,            c_v_norm);
-                    // __m256d c_C              = _mm256_fmadd_pd( c_B,           twoCS2inv_pd,   ones_pd);
+                    // __m256d c_C              = _mm256_fmadd_pd( c_B,           halfCS2inv_pd,   ones_pd);
                     // __m256d c_D              = _mm256_fmadd_pd( c_tmpB,        c_C,            c_tmpC);
-                    // __m256d d_A              = _mm256_fmadd_pd( d_dv_dot,      twoCS2inv_pd,   twos_pd);
+                    // __m256d d_A              = _mm256_fmadd_pd( d_dv_dot,      halfCS2inv_pd,   twos_pd);
                     // __m256d d_B              = _mm256_fmsub_pd( d_dv_dot,      d_A,            d_v_norm);
-                    // __m256d d_C              = _mm256_fmadd_pd( d_B,           twoCS2inv_pd,   ones_pd);
+                    // __m256d d_C              = _mm256_fmadd_pd( d_B,           halfCS2inv_pd,   ones_pd);
                     // __m256d d_D              = _mm256_fmadd_pd( d_tmpB,        d_C,            d_tmpC);
 
 
