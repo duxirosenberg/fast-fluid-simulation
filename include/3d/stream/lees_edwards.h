@@ -86,11 +86,11 @@ static struct ops stream_lees_edwards_flops_3(struct LBMarrays* S) {
 
     long periodicIops;
     if(q == 27) {
-        periodicIops = 13 + 6 * q + 78 * z + 18 * z * (7 + 12 * (S->nY - 2));
+        periodicIops = 13 + 23 * q + 78 * z + 18 * z * (7 + 12 * (S->nY - 2));
     } else if (q == 15) {
-        periodicIops = 13 + 6 * q + 26 * z + 10 * z * (7 + 12 * (S->nY - 2));
+        periodicIops = 13 + 23 * q + 26 * z + 10 * z * (7 + 12 * (S->nY - 2));
     } else {
-        periodicIops = 1 + 6 * q + 26 * z +  6 * z * (7 + 12 * (S->nY - 2));
+        periodicIops = 1 + 23 * q + 26 * z +  6 * z * (7 + 12 * (S->nY - 2));
     }
 
     struct ops ops = {

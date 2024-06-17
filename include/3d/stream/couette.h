@@ -92,11 +92,11 @@ static struct ops stream_couette_memcpy_flops(struct LBMarrays* S) {
     long upBoundary = S->direction_size / 3;
     long periodicIops;
     if(q == 27) {
-        periodicIops = 13 + 6 * q + 78 * nZ + 18 * nZ * (7 + 12 * (S->nY - 2));
+        periodicIops = 13 + 23 * q + 78 * nZ + 18 * nZ * (7 + 12 * (S->nY - 2));
     } else if (q == 15) {
-        periodicIops = 13 + 6 * q + 26 * nZ + 10 * nZ * (7 + 12 * (S->nY - 2));
+        periodicIops = 13 + 23 * q + 26 * nZ + 10 * nZ * (7 + 12 * (S->nY - 2));
     } else {
-        periodicIops = 1 + 6 * q + 26 * nZ +  6 * nZ * (7 + 12 * (S->nY - 2));
+        periodicIops = 1 + 23 * q + 26 * nZ +  6 * nZ * (7 + 12 * (S->nY - 2));
     }
 
    //int t2 = q*((2/3.)*nZX + (3./q)*nXYZ + 2*t1*nZ*(nXY-nX) + (nZ/3.)*(nY-1/3)*nX);

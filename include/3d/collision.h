@@ -129,7 +129,7 @@ static struct ops collision_flops_2(struct LBMarrays* S) {
 static struct ops collision_flops_nb(struct LBMarrays* S) {
     long val = S->nXYZ * S->direction_size;
     struct ops ops = {
-            7 + val * 22,
+            7 + val * 20,
             val*2 + 3*S->direction_size,
             S->nXYZ*(S->direction_size+3+1)*(int)(sizeof(double)) + S->direction_size*(int)(3*sizeof(int) +sizeof(double)),
             val*(int)(sizeof(double))
@@ -143,7 +143,7 @@ static struct ops collision_flops_blocking(struct LBMarrays* S) {
     long val = S->nXYZ * S->direction_size;
     const int nBB = BLOCKSIZE_COL > S->nXYZ ? S->nXYZ : BLOCKSIZE_COL;
     struct ops ops = {
-            7 + val * 22,
+            7 + val * 20,
             1 + val*2 + (S->nXYZ/nBB)*3*S->direction_size,
             S->nXYZ*(S->direction_size+3+1)*(int)(sizeof(double)) + S->direction_size*(int)(3*sizeof(int) +sizeof(double)),
             val*(int)(sizeof(double))
@@ -168,15 +168,13 @@ static void register_collision_functions() {
     add_collision_struct_func(&collision_2,      &collision_flops_2, "Collision 1         ");
 
     add_collision_struct_func(&collision_3,      &collision_flops_nb, "Collision 2         ");
-    add_collision_struct_func(&collision_6,      &collision_flops_blocking, "Collision 2 Blocking");
+    //add_collision_struct_func(&collision_6,      &collision_flops_blocking, "Collision 2 Blocking");
 
     add_collision_struct_func(&collision_SSA3_nb,   &collision_flops_nb, "Collision 3         ");
-    add_collision_struct_func(&collision_SSA3,   &collision_flops_blocking,    "Collision 3 Blocking");
+    //add_collision_struct_func(&collision_SSA3,   &collision_flops_blocking,    "Collision 3 Blocking");
 
     add_collision_struct_func(&collision_AVX5_u2_nb, &collision_flops_nb, "Collision 4         ");
-    add_collision_struct_func(&collision_AVX5_u2, &collision_flops_blocking,   "Collision 4 Blocking");
-
-
+    //add_collision_struct_func(&collision_AVX5_u2, &collision_flops_blocking,   "Collision 4 Blocking");
 }
 
 #endif //CMDLINE_LBM_COLLISION_H

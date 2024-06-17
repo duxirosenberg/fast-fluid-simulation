@@ -34,7 +34,7 @@ void momentum_arrays(int nX, int nY, int nZ, int direction_size, double* density
 static struct ops momentum_baseline_flops(struct LBMarrays* S) {
     long val = S->nX * S->nY * S->nZ;
     struct ops ops = {
-            val * (3 + 4 * S->direction_size),
+            val * (3 + 7 * S->direction_size),
             val * (10 + 14 * S->direction_size),
             val*(S->direction_size+3+1)*(int)(sizeof(double)) + S->direction_size*(int)(sizeof(int)),
             val*4*(int)(sizeof(double))
@@ -59,8 +59,8 @@ static struct ops momentum_O11_flops(struct LBMarrays* S) {
 static struct ops momentum_O12_flops(struct LBMarrays* S) {
     long val = S->nX * S->nY * S->nZ;
     struct ops ops = {
-            val * (3 + 4 * S->direction_size),
-            3 + val * (3 + 4*S->direction_size) + S->nX * S->nY,
+            val * (3 + 7 * S->direction_size),
+            3 + val * (3 + 4 * S->direction_size) + S->nX * S->nY,
             val*(S->direction_size+3+1)*(int)(sizeof(double)) + S->direction_size*(int)(sizeof(int)),
             val*4*(int)(sizeof(double))
     };
@@ -72,8 +72,8 @@ static struct ops momentum_O12_flops(struct LBMarrays* S) {
 static struct ops momentum_O1_flops(struct LBMarrays* S) {
     long val = S->nX * S->nY * S->nZ;
     struct ops ops = {
-            val * (4 + 4 * S->direction_size),
-            3 + val * (3 + 4*S->direction_size) + S->nX * S->nY,
+            val * (4 + 7 * S->direction_size),
+            3 + val * (3 + 4 *S->direction_size) + S->nX * S->nY,
             val*(S->direction_size+3+1)*(int)(sizeof(double)) + S->direction_size*(int)(sizeof(int)),
             val*4*(int)(sizeof(double))
     };
@@ -85,7 +85,7 @@ static struct ops momentum_O1_flops(struct LBMarrays* S) {
 static struct ops momentum_O2_flops(struct LBMarrays* S) {
     long val = S->nX * S->nY * S->nZ;
     struct ops ops = {
-            val * (4 + 4 * S->direction_size),
+            val * (4 + 7 * S->direction_size),
             2 + S->direction_size + S->direction_size * val * 4,
             val*(S->direction_size+3+1)*(int)(sizeof(double)) + S->direction_size*(int)(sizeof(int)),
             val*4*(int)(sizeof(double))
