@@ -109,12 +109,23 @@ static struct ops momentum_O21_flops(struct LBMarrays* S) {
     return ops;
 }
 
+static struct ops momentum_O3_flops(struct LBMarrays* S) {
+    long val = S->nX * S->nY * S->nZ;
+    struct ops ops = {
+            val * (4 + 7 * S->direction_size),
+            2 + S->direction_size + S->direction_size * val * 2,
+            val*(S->direction_size+3+1)*(int)(sizeof(double)) + S->direction_size*(int)(sizeof(int)),
+            val*4*(int)(sizeof(double))
+    };
+    return ops;
+}
+
 static void register_momentum_functions() {
 
     add_momentum_struct_func(&momentumO1, &momentum_O1_flops, "Momentum 1"); //best in optimization step 1
     add_momentum_struct_func(&momentumO2, &momentum_O2_flops, "Momentum 2");
-    add_momentum_struct_func(&momentumO25, &momentum_O2_flops, "Momentum 3");
-    add_momentum_struct_func(&momentumO6, &momentum_O2_flops, "Momentum 4");
+    add_momentum_struct_func(&momentumO25, &momentum_O3_flops, "Momentum 3");
+    add_momentum_struct_func(&momentumO6, &momentum_O3_flops, "Momentum 4");
 
     //add_momentum_array_func(&momentum_arraysO2, &momentum_baseline_flops, "Momentum - 02 arrays");
     //add_momentum_struct_func(&momentumO3, &momentum_baseline_flops, "Momentum - 03 - AVX");
