@@ -1,0 +1,2 @@
+### Jupyter Notebooks for Plots
+There are three main notebooks for plotting in which the most relevant plots can be found. One for the rooflines, one for the performance, one for the bottlenecks and finally one for runtimes. They can be found in the notebooks folder. In each file the current plots are printed and can be found in one file. For more plots and examples, checkout the "plot" branch.
