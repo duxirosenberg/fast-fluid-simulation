@@ -6,7 +6,7 @@
 
 This repository contains the code and documentation for our project on optimizing the Lattice Boltzmann Method (LBM) for fluid dynamics simulations. Our primary goal was to enhance the performance of LBM by implementing various optimizations, resulting in a significant speedup.
 
-For more details on our results, refer to the full project report included in this repository [TODO: Link].
+For more details on our results, refer to the full project [report](./54_report.pdf).
 
 ## Table of Contents
 
